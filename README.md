@@ -119,22 +119,32 @@ supabase/
 
 ---
 
-## What's built (Steps 1–3)
+## What's built (Phase 1 — Core Engine)
 
-- [x] Next.js 14 App Router setup
-- [x] Tailwind CSS configured
-- [x] Google + GitHub OAuth via NextAuth
-- [x] User auto-created in Supabase on first login
-- [x] Protected dashboard route (redirects to login if no session)
-- [x] Full TypeScript types for all 6 DB tables
-- [x] Row Level Security on all tables
-- [x] Supabase schema with indexes and RLS policies
-- [x] Elo rating initialised at 1200 on signup
+### 🧩 Smart Question Engine
+- [x] **Gemini-Flash-Lite Integration**: Generous free-tier AI generation of high-quality coding questions.
+- [x] **Multi-Type Support**: 
+  - **MCQ**: Conceptual questions with AI-generated misconception feedback.
+  - **Fill in the Blank**: Tactical blanks targeting core logic gaps.
+  - **Drag to Order**: Interactive sorting for procedural and algorithmic knowledge.
+  - **Code Space**: High-performance side-by-side IDE for real-world challenges.
+- [x] **Monaco Editor**: Professional-grade IDE integration (vs-dark theme, JetBrains Mono).
 
-## What's next (Week 1 — when you say go)
+### 🎓 Socratic Mentorship
+- [x] **4-Level Calibrated Hints**: Logical nudge → Directional nudge → Pseudocode → Full walkthrough.
+- [x] **AI Logic Verification**: Deep analysis of code against hidden test cases and edge cases.
+- [x] **Specific Feedback**: Explanations that tell you *why* you're wrong, not just that you are.
 
-- [ ] MCQ question generation via Gemini API
-- [ ] Structured JSON output with Zod schema
-- [ ] Answer submission + Elo calculation
-- [ ] Basic hint engine (Level 1)
-- [ ] Session configurator UI
+### 🧠 Analytics & Adaptation
+- [x] **Adaptive Elo Rating**: Question difficulty automatically matches your current skill level.
+- [x] **Topic Statistics**: Tracking "Weak Zones" across subtopics like Arrays, Graphs, and System Design.
+- [x] **Session Configurator**: Full control over topics, styles (FAANG/Strict/Friendly), and language (Python, C++, JS).
+
+---
+
+## What's next (Phase 2 — Adaptive Mentorship)
+
+- [ ] **Adaptive Memory**: AI remembers your specific conceptual gaps and adjusts sessions to bridge them.
+- [ ] **Real-time Interviewer Sidebar**: A conversational mentor that reacts and chats as you type code.
+- [ ] **Judge0 Integration**: Official native code execution across Python, C++, and JavaScript.
+- [ ] **Gamification**: Visual leveling system, badges for mastering specific topics, and streak trackers.

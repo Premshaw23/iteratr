@@ -47,6 +47,7 @@ export interface CodePayload {
 // ── Drag to order payload ─────────────────────────────────────
 export interface OrderPayload {
   steps: string[]            // correct order
+  shuffled_steps: string[]   // shuffled order for UI
 }
 
 export type QuestionPayload = MCQPayload | FillPayload | CodePayload | OrderPayload

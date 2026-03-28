@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import 'katex/dist/katex.min.css';
 
 @tailwind base;
 @tailwind components;
@@ -18,6 +19,27 @@
     --warning:     #D97706;
     --danger:      #DC2626;
   }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    background: var(--surface);
+    color: var(--dark);
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* ── Badge utilities ─────────────────────────────────────── */
+@layer components {
+  .badge-blue   { @apply text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-700; }
+  .badge-purple { @apply text-xs font-semibold px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-700; }
+  .badge-amber  { @apply text-xs font-semibold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-700; }
+  .badge-green  { @apply text-xs font-semibold px-2.5 py-0.5 rounded-full bg-green-100 text-green-700; }
+  .badge-red    { @apply text-xs font-semibold px-2.5 py-0.5 rounded-full bg-red-100 text-red-700; }
+  .badge-gray   { @apply text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600; }
 }
 
 @layer utilities {
@@ -34,26 +56,6 @@
   
   .border-brand   { border-color: var(--brand); }
   .border-border  { border-color: var(--border); }
-}
-
-* {
-  box-sizing: border-box;
-}
-
-body {
-  background: var(--surface);
-  color: var(--dark);
-  font-family: 'Inter', system-ui, sans-serif;
-  -webkit-font-smoothing: antialiased;
-}
-
-/* Custom Components */
-.badge-blue {
-  @apply text-[10px] font-bold uppercase tracking-wider bg-brand-light text-brand px-2 py-0.5 rounded-md;
-}
-
-.badge-green {
-  @apply text-[10px] font-bold uppercase tracking-wider bg-green-50 text-green-700 px-2 py-0.5 rounded-md border border-green-100;
 }
 
 /* Scrollbar styling */
