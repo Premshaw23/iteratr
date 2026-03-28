@@ -9,14 +9,15 @@ Based on the analysis of the `src` directory and `package.json`:
 | :--- | :---: | :---: | :--- |
 | **Auth & Profiles** | 1 | ✅ Done | Supabase & NextAuth integration verified. |
 | **Session Configurator** | 2 | ✅ Done | UI is complete with Topic, Difficulty, and Mode selection. |
-| **MCQ Engine** | 1 | ✅ Done | Fully functional in `/session/play` with feedback and scoring. |
-| **Socratic Hint System** | 1/2 | ⚠️ Partial | UI supports 4-level hints; logic resides in `/api/hint`. |
-| **Elo Rating System** | 2 | ⚠️ Partial | UI shows Elo changes; backend calculation needs verification. |
-| **Fill in the Blank** | 1 | ❌ Missing | Question rendering logic only supports MCQ payload. |
-| **Code Space (Monaco)** | 1 | ❌ Missing | Editor not integrated; `monaco-editor` missing from dependencies. |
-| **Code Execution (Judge0)** | 1 | ❌ Missing | No backend service for sandboxed execution found. |
-| **Drag to Order** | 1 | ❌ Missing | Component not implemented. |
-| **Knowledge Gap Detector**| 2 | ❌ Missing | Needs automated topic-stats tracking and logic. |
+| **MCQ Engine** | 1 | ✅ Done | Fully functional with AI feedback and scoring. |
+| **Socratic Hint System** | 1/2 | ✅ Done | 4-level calibrated hints implemented with logic in `/api/hint`. |
+| **Elo Rating System** | 2 | ✅ Done | Dynamic calculation and history tracking in effect. |
+| **Fill in the Blank** | 1 | ✅ Done | Semantic AI validation (handles '0' vs 'zero') implemented. |
+| **Code Space (Monaco)** | 1 | ✅ Done | Professional IDE integrated with JetBrains Mono. |
+| **Code Verification** | 1 | ✅ Done | AI Logic Verification against hidden test cases implemented. |
+| **Drag to Order** | 1 | ✅ Done | Native drag-and-drop sequence validation implemented. |
+| **Knowledge Gap Detector**| 2 | ⚠️ Partial | Topic-stats tracking live; UI mastery map pending. |
+| **Adaptive Memory** | 2 | ❌ Next | AI persistent memory of user's conceptual gaps. |
 | **Mock Interview Suite** | 3 | ❌ Missing | Requires WebSocket setup and Multi-Agent logic. |
 | **Analytics & Heatmap** | 4 | ❌ Missing | Dashboard needs Activity Grid and topic-mastery radar. |
 

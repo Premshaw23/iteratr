@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 
 const TOPICS = [
   { id: 'arrays',             label: 'Arrays'           },
@@ -35,6 +35,18 @@ const TIMERS = [
 ]
 
 export default function SessionNewPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-surface flex items-center justify-center p-6 text-sm text-mid">
+        Loading configurator...
+      </div>
+    }>
+      <SessionNewContent />
+    </Suspense>
+  )
+}
+
+function SessionNewContent() {
   const { data: session, status } = useSession()
   const router   = useRouter()
   const params   = useSearchParams()
