@@ -18,48 +18,94 @@ export default function DashboardClient({ user, topicStats, eloHistory }: Props)
     <div className="min-h-screen bg-surface">
 
       {/* ── TOPBAR ─────────────────────────────────── */}
-      <header className="h-13 bg-white border-b border-border flex items-center justify-between px-6 sticky top-0 z-10">
-        <span className="text-xl font-bold text-brand">iteratr</span>
-        <nav className="flex gap-7">
-          {[
-            { href: '/dashboard',  label: 'Dashboard' },
-            { href: '/session/new', label: 'Practice'  },
-            { href: '/interview',  label: 'Interview'  },
-            { href: `/u/${user.display_name}`, label: 'Profile' },
-          ].map(n => (
-            <Link
-              key={n.href}
-              href={n.href}
-              className="text-sm text-mid hover:text-dark font-medium transition"
-            >
-              {n.label}
-            </Link>
-          ))}
-        </nav>
-        <div className="flex items-center gap-3">
-          {user.streak_count > 0 && (
-            <span className="text-xs bg-amber-50 text-amber-700 border border-amber-200 px-3 py-1 rounded-full font-medium">
-              🔥 {user.streak_count} day streak
-            </span>
-          )}
-          <div className="relative group">
-            <div className="w-8 h-8 rounded-full bg-brand-light flex items-center justify-center text-brand font-bold text-xs cursor-pointer">
-              {user.display_name.slice(0, 2).toUpperCase()}
-            </div>
-            {/* Dropdown */}
-            <div className="absolute right-0 top-10 w-40 bg-white border border-border rounded-xl shadow-sm opacity-0 group-hover:opacity-100 transition pointer-events-none group-hover:pointer-events-auto">
-              <button
-                onClick={() => signOut({ callbackUrl: '/login' })}
-                className="w-full text-left px-4 py-3 text-sm text-mid hover:text-dark hover:bg-surface rounded-xl transition"
+      <header className="h-16 bg-white/70 backdrop-blur-xl border-b border-border flex items-center justify-between px-6 sticky top-0 z-50">
+        <div className="flex items-center gap-8">
+          <Link href="/dashboard" className="text-2xl font-bold text-brand tracking-tight hover:opacity-90 transition">
+            iteratr
+          </Link>
+          
+          <nav className="hidden md:flex items-center gap-1">
+            {[
+              { href: '/dashboard',   label: 'Dashboard' },
+              { href: '/session/new',  label: 'Practice'  },
+              { href: '/interview',   label: 'Interviews' },
+            ].map(n => (
+              <Link
+                key={n.href}
+                href={n.href}
+                className="px-4 py-2 text-sm text-mid hover:text-dark hover:bg-surface rounded-lg font-medium transition active:scale-95"
               >
-                Sign out
-              </button>
+                {n.label}
+              </Link>
+            ))}
+          </nav>
+        </div>
+
+        <div className="flex items-center gap-4">
+          {/* Streak Indicator */}
+          {user.streak_count > 0 && (
+            <div className="flex items-center gap-2 bg-amber-50 text-amber-700 border border-amber-200/50 px-3 py-1.5 rounded-full shadow-sm">
+              <span className="text-sm font-bold">🔥 {user.streak_count}</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider opacity-60">Streak</span>
+            </div>
+          )}
+
+          {/* User Menu */}
+          <div className="relative group">
+            <button className="flex items-center gap-2 p-1 pr-3 rounded-full border border-border bg-white hover:border-brand/30 hover:shadow-md transition group-hover:bg-surface">
+              <div className="w-8 h-8 rounded-full bg-brand overflow-hidden shadow-inner flex items-center justify-center text-white text-xs font-bold border-2 border-white">
+                {user.avatar_url ? (
+                  <img src={user.avatar_url} alt={user.display_name} className="w-full h-full object-cover" />
+                ) : (
+                  user.display_name.slice(0, 2).toUpperCase()
+                )}
+              </div>
+              <div className="flex flex-col items-start min-w-[60px]">
+                <span className="text-xs font-bold text-dark leading-none">{user.display_name}</span>
+                <span className="text-[10px] text-muted font-medium mt-0.5">Elo {user.elo_rating}</span>
+              </div>
+            </button>
+
+            {/* Dropdown Menu */}
+            <div className="absolute right-0 top-full pt-2 w-56 opacity-0 translate-y-2 invisible group-hover:opacity-100 group-hover:visible group-hover:translate-y-0 transition-all z-50">
+              <div className="bg-white border border-border rounded-2xl shadow-xl overflow-hidden p-1.5">
+                <div className="px-3 py-2.5 mb-1 bg-surface/50 rounded-xl">
+                  <p className="text-[10px] font-bold text-muted uppercase tracking-widest mb-1">Signed in as</p>
+                  <p className="text-xs font-bold text-dark truncate">{user.email}</p>
+                </div>
+
+                <Link 
+                  href={`/u/${user.display_name}`}
+                  className="flex items-center gap-2.5 px-3 py-2 text-sm text-mid hover:text-brand hover:bg-brand-light rounded-xl transition"
+                >
+                  <span className="text-lg">👤</span> Profile Settings
+                </Link>
+                
+                <Link 
+                  href="/stats"
+                  className="flex items-center gap-2.5 px-3 py-2 text-sm text-mid hover:text-brand hover:bg-brand-light rounded-xl transition"
+                >
+                  <span className="text-lg">📊</span> Performance
+                </Link>
+
+                <div className="h-px bg-border my-1 mx-1" />
+
+                <button
+                  onClick={() => signOut({ callbackUrl: '/login' })}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-xl transition font-medium text-left"
+                >
+                  <svg className="w-4 h-4 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                  Sign out
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </header>
 
-      <div className="flex" style={{ height: 'calc(100vh - 52px)' }}>
+      <div className="flex" style={{ height: 'calc(100vh - 64px)' }}>
 
         {/* ── SIDEBAR ─────────────────────────────────── */}
         <aside className="w-56 bg-white border-r border-border p-3 flex flex-col gap-1 overflow-y-auto">

@@ -4,18 +4,36 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --brand:       #2D4EF5;
-  --brand-dark:  #1D3ED8;
-  --brand-light: #EEF2FF;
-  --surface:     #F1F5F9;
-  --border:      #E2E8F0;
-  --dark:        #0F172A;
-  --mid:         #475569;
-  --muted:       #94A3B8;
-  --success:     #059669;
-  --warning:     #D97706;
-  --danger:      #DC2626;
+@layer base {
+  :root {
+    --brand:       #2D4EF5;
+    --brand-dark:  #1D3ED8;
+    --brand-light: #EEF2FF;
+    --surface:     #F1F5F9;
+    --border:      #E2E8F0;
+    --dark:        #0F172A;
+    --mid:         #475569;
+    --muted:       #94A3B8;
+    --success:     #059669;
+    --warning:     #D97706;
+    --danger:      #DC2626;
+  }
+}
+
+@layer utilities {
+  .bg-brand       { background-color: var(--brand); }
+  .bg-brand-dark  { background-color: var(--brand-dark); }
+  .bg-brand-light { background-color: var(--brand-light); }
+  .bg-surface     { background-color: var(--surface); }
+  
+  .text-brand      { color: var(--brand); }
+  .text-brand-dark { color: var(--brand-dark); }
+  .text-dark       { color: var(--dark); }
+  .text-mid        { color: var(--mid); }
+  .text-muted      { color: var(--muted); }
+  
+  .border-brand   { border-color: var(--brand); }
+  .border-border  { border-color: var(--border); }
 }
 
 * {
@@ -27,6 +45,15 @@ body {
   color: var(--dark);
   font-family: 'Inter', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Custom Components */
+.badge-blue {
+  @apply text-[10px] font-bold uppercase tracking-wider bg-brand-light text-brand px-2 py-0.5 rounded-md;
+}
+
+.badge-green {
+  @apply text-[10px] font-bold uppercase tracking-wider bg-green-50 text-green-700 px-2 py-0.5 rounded-md border border-green-100;
 }
 
 /* Scrollbar styling */
