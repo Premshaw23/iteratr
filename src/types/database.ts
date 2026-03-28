@@ -88,6 +88,7 @@ export interface Database {
           updated_at?: string
         }
         Update: Partial<Database['public']['Tables']['users']['Insert']>
+        Relationships: []
       }
 
       // ── questions ────────────────────────────────────────
@@ -110,6 +111,7 @@ export interface Database {
           created_at?: string
         }
         Update: Partial<Database['public']['Tables']['questions']['Insert']>
+        Relationships: []
       }
 
       // ── attempts ─────────────────────────────────────────
@@ -132,6 +134,7 @@ export interface Database {
           created_at?: string
         }
         Update: Partial<Database['public']['Tables']['attempts']['Insert']>
+        Relationships: []
       }
 
       // ── sessions ──────────────────────────────────────────
@@ -162,6 +165,7 @@ export interface Database {
           created_at?: string
         }
         Update: Partial<Database['public']['Tables']['sessions']['Insert']>
+        Relationships: []
       }
 
       // ── elo_history ───────────────────────────────────────
@@ -181,6 +185,7 @@ export interface Database {
           created_at?: string
         }
         Update: Partial<Database['public']['Tables']['elo_history']['Insert']>
+        Relationships: []
       }
 
       // ── topic_stats ───────────────────────────────────────
@@ -201,7 +206,20 @@ export interface Database {
           updated_at?: string
         }
         Update: Partial<Database['public']['Tables']['topic_stats']['Insert']>
+        Relationships: []
       }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
     }
   }
 }

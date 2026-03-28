@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { supabaseAdmin } from '@/lib/supabase'
+import type { UserRow } from '@/types/database'
 import DashboardClient from './dashboard-client'
 
 export default async function DashboardPage() {
@@ -10,13 +11,14 @@ export default async function DashboardPage() {
   if (!session) redirect('/login')
 
   // Fetch full user data from DB
-  const { data: user } = await supabaseAdmin
+  const { data: userData } = await supabaseAdmin
     .from('users')
     .select('*')
     .eq('email', session.user.email!)
     .single()
 
-  if (!user) redirect('/login')
+  if (!userData) redirect('/login')
+  const user = userData as UserRow
 
   // Fetch topic stats
   const { data: topicStats } = await supabaseAdmin

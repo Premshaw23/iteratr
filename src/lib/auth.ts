@@ -46,11 +46,11 @@ export const authOptions: NextAuthOptions = {
             display_name:       user.name ?? user.email.split('@')[0],
             avatar_url:         user.image ?? null,
             preferred_language: 'python',
-            elo_rating:         1200,       // everyone starts at 1200
+            elo_rating:         1200,
             streak_count:       0,
             longest_streak:     0,
             reflection_text:    null,
-          })
+          } as any) // Type check issue in NextAuth callback context
 
           if (error) {
             console.error('Error creating user:', error)
