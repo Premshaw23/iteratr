@@ -1,0 +1,42 @@
+name: Iteratr CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-lint:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run linting
+      run: npm run lint
+
+    - name: Build Next.js application
+      run: npm run build
+      env:
+        # Prevent telemetry during CI
+        NEXT_TELEMETRY_DISABLED: 1
+        # Placeholders for build-time static checks (if any)
+        NEXTAUTH_SECRET: static-placeholder-for-ci
+        NEXTAUTH_URL: http://localhost:3000
+        SUPABASE_URL: https://placeholder.supabase.co
+        SUPABASE_SERVICE_ROLE_KEY: static-placeholder-for-ci
+        NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: static-placeholder-for-ci
+        GEMINI_API_KEY: static-placeholder-for-ci
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
