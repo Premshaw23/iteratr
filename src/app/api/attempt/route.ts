@@ -129,6 +129,7 @@ export async function POST(req: NextRequest) {
       hintsUsed:   hints_used,
       timeTaken:   time_taken_seconds,
       timeLimit:   0, // no time limit for now
+      streakCount: user.streak_count || 0,
     })
 
     // ── Save attempt ──────────────────────────────────────────────
@@ -148,12 +149,12 @@ export async function POST(req: NextRequest) {
       .select()
       .single()
 
-    // ── Update user Elo & Streak ──────────────────────────────────
-    const lastDate = new Date(user.updated_at).toDateString()
-    const todayDate = new Date().toDateString()
-    const yesterday = new Date()
-    yesterday.setDate(yesterday.getDate() - 1)
-    const yesterdayDate = yesterday.toDateString()
+    // ── Update user Elo & Streak (IST TIME) ───────────────────────
+    const { getISTDateString, getYesterdayISTDateString } = require('@/lib/date-utils')
+    
+    const lastDate = getISTDateString(new Date(user.updated_at))
+    const todayDate = getISTDateString()
+    const yesterdayDate = getYesterdayISTDateString()
 
     let newStreak = user.streak_count || 0
     if (lastDate === yesterdayDate) {
@@ -192,10 +193,18 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (existingStat) {
-      const newFails   = isCorrect ? existingStat.fail_count    : existingStat.fail_count + 1
+      // ── UPDATE EXISTING STATS ───────────────────────────────────
+      // On success: decrement fail_count (reward progress) and increase streak
+      // On failure: increment fail_count and reset streak
+      const newFails   = isCorrect 
+        ? Math.max(0, existingStat.fail_count - 1) 
+        : existingStat.fail_count + 1
+      
       const newSolved  = isCorrect ? existingStat.solved_count + 1 : existingStat.solved_count
       const newConsec  = isCorrect ? existingStat.consecutive_correct + 1 : 0
-      const isWeakZone = newFails >= 3 && newConsec < 3
+      
+      // Escape weak zone if: fails drop below threshold OR user hits a 2-solve streak
+      const isWeakZone = newFails >= 3 && newConsec < 2
 
       await supabaseAdmin
         .from('topic_stats')
@@ -208,6 +217,18 @@ export async function POST(req: NextRequest) {
         })
         .eq('id', existingStat.id)
     } else {
+      // ── CREATE NEW TOPIC STAT ────────────────────────────────────
+      await supabaseAdmin
+        .from('topic_stats')
+        .insert({
+          user_id:              user.id,
+          topic:                question.topic,
+          subtopic:             question.subtopic,
+          fail_count:           isCorrect ? 0 : 1,
+          solved_count:         isCorrect ? 1 : 0,
+          consecutive_correct:  isCorrect ? 1 : 0,
+          is_weak_zone:         false,
+        })
     }
 
     // ── Update Reflection (Long-term memory) every 5 attempts ──────────

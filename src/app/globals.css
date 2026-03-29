@@ -7,17 +7,19 @@
 
 @layer base {
   :root {
-    --brand:       #2D4EF5;
-    --brand-dark:  #1D3ED8;
-    --brand-light: #EEF2FF;
-    --surface:     #F1F5F9;
-    --border:      #E2E8F0;
-    --dark:        #0F172A;
+    --brand:       #3b82f6; /* Modern blue */
+    --brand-dark:  #1d4ed8;
+    --brand-light: #eff6ff;
+    --surface:     #f8fafc;
+    --border:      #e2e8f0;
+    --dark:        #0f172a;
     --mid:         #475569;
-    --muted:       #94A3B8;
-    --success:     #059669;
-    --warning:     #D97706;
-    --danger:      #DC2626;
+    --muted:       #94a3b8;
+    --success:     #10b981;
+    --warning:     #f59e0b;
+    --danger:      #ef4444;
+    --glass:       rgba(255, 255, 255, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.3);
   }
 
   * {
@@ -56,6 +58,42 @@
   
   .border-brand   { border-color: var(--brand); }
   .border-border  { border-color: var(--border); }
+
+  /* Premium Utilities */
+  .bg-glass {
+    background: var(--glass);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+  }
+
+  .gradient-mesh {
+    background-color: #f8fafc;
+    background-image: 
+      radial-gradient(at 100% 0%, rgba(59, 130, 246, 0.1) 0px, transparent 50%),
+      radial-gradient(at 0% 100%, rgba(139, 92, 246, 0.1) 0px, transparent 50%);
+  }
+
+  .gradient-brand {
+    background: linear-gradient(135deg, var(--brand) 0%, #6366f1 100%);
+  }
+
+  .card-hover {
+    @apply transition-all duration-300 hover:shadow-xl hover:-translate-y-1;
+  }
+
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-5px); }
+    100% { transform: translateY(0px); }
+  }
+
+  .animate-pulse-slow {
+    animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
 }
 
 /* Scrollbar styling */

@@ -10,6 +10,7 @@ export interface EloInput {
   hintsUsed:    number  // 0-4
   timeTaken:    number  // seconds
   timeLimit:    number  // seconds (0 = no limit)
+  streakCount:  number  // current streak
 }
 
 export interface EloResult {
@@ -24,7 +25,7 @@ function expectedScore(userElo: number, questionElo: number): number {
 }
 
 export function calculateEloChange(input: EloInput): EloResult {
-  const { userElo, questionElo, isCorrect, hintsUsed, timeTaken, timeLimit } = input
+  const { userElo, questionElo, isCorrect, hintsUsed, timeTaken, timeLimit, streakCount } = input
 
   const expected = expectedScore(userElo, questionElo)
   const K = 32 // K-factor — how much each question can move rating
@@ -52,6 +53,12 @@ export function calculateEloChange(input: EloInput): EloResult {
     }
 
     change = Math.max(1, base - hintPenalty + timeModifier)
+
+    // Apply streak multiplier (1.1x, 1.2x, ..., up to 1.5x)
+    if (streakCount > 0) {
+      const multiplier = Math.min(1.5, 1 + (streakCount * 0.1))
+      change = Math.round(change * multiplier)
+    }
 
     reason = hintsUsed === 0
       ? `Correct, no hints${timeModifier > 0 ? ', fast' : ''}`

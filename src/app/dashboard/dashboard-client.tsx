@@ -24,13 +24,13 @@ export default function DashboardClient({ user, topicStats, eloHistory, intervie
   const distinctTopics = Array.from(new Set(topicStats.map(s => s.topic)))
 
   return (
-    <div className="min-h-screen bg-surface">
+    <div className="min-h-screen gradient-mesh">
 
       {/* ── TOPBAR ─────────────────────────────────── */}
-      <header className="h-16 bg-white/70 backdrop-blur-xl border-b border-border flex items-center justify-between px-6 sticky top-0 z-50">
+      <header className="h-16 bg-glass border-b border-border flex items-center justify-between px-6 sticky top-0 z-50">
         <div className="flex items-center gap-8">
-          <Link href="/dashboard" className="text-2xl font-bold text-brand tracking-tight hover:opacity-90 transition">
-            iteratr
+          <Link href="/dashboard" className="text-2xl font-black text-brand tracking-tighter hover:opacity-90 transition group">
+            itera<span className="text-dark transition-colors group-hover:text-brand">tr</span>
           </Link>
           
           <nav className="hidden md:flex items-center gap-1">
@@ -53,10 +53,10 @@ export default function DashboardClient({ user, topicStats, eloHistory, intervie
         <div className="flex items-center gap-4">
           {/* Streak Indicator */}
           {user.streak_count > 0 && (
-            <div className="flex items-center gap-2 bg-amber-50 text-amber-700 border border-amber-200/50 px-3 py-1.5 rounded-full shadow-sm">
-              <Flame size={14} className="fill-amber-500 stroke-amber-600" />
+            <div className="flex items-center gap-2 bg-amber-500/10 text-amber-700 border border-amber-500/20 px-3 py-1.5 rounded-full shadow-sm animate-pulse-slow">
+              <Flame size={14} className="fill-amber-500 stroke-amber-600 animate-float" />
               <span className="text-sm font-bold">{user.streak_count}</span>
-              <span className="text-[10px] font-bold uppercase tracking-wider opacity-60">Streak</span>
+              <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Streak</span>
             </div>
           )}
 
@@ -150,7 +150,10 @@ export default function DashboardClient({ user, topicStats, eloHistory, intervie
             🏆 Leaderboard
           </Link>
           {weakZones.length > 0 && (
-            <Link href="/session/new?mode=weak_zones" className="px-2 py-2 rounded-lg text-sm text-red-600 hover:bg-red-50 transition">
+            <Link 
+              href={`/session/new?mode=weak_zones&topics=${encodeURIComponent(Array.from(new Set(weakZones.map(z => z.topic))).join(','))}&subtopics=${encodeURIComponent(weakZones.map(z => z.subtopic).join(','))}`}
+              className="px-2 py-2 rounded-lg text-sm text-red-600 hover:bg-red-50 transition"
+            >
               Fix weak zones ({weakZones.length})
             </Link>
           )}
@@ -167,14 +170,16 @@ export default function DashboardClient({ user, topicStats, eloHistory, intervie
               { label: 'Solved',      value: totalSolved,                      sub: 'questions',       icon: Target, color: 'text-emerald-600' },
               { label: 'Interviews',  value: interviewCount,                   sub: 'mock sessions',   icon: MessageSquare, color: 'text-purple-600' },
             ].map(s => (
-              <div key={s.label} className="bg-white border border-border rounded-xl p-4 flex flex-col justify-between">
+              <div key={s.label} className="bg-white/80 backdrop-blur-md border border-border rounded-2xl p-4 flex flex-col justify-between card-hover shadow-sm">
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-[10px] font-bold text-muted uppercase tracking-wider">{s.label}</p>
-                  <s.icon className={`w-3.5 h-3.5 ${s.color}`} />
+                  <p className="text-[10px] font-black text-muted uppercase tracking-widest">{s.label}</p>
+                  <div className={`p-1.5 rounded-lg bg-slate-50 border border-slate-100 ${s.color}`}>
+                    <s.icon size={14} />
+                  </div>
                 </div>
                 <div>
-                  <p className="text-3xl font-black text-dark tracking-tight">{s.value}</p>
-                  <p className={`text-[11px] mt-1 font-semibold ${s.color}`}>{s.sub}</p>
+                  <p className="text-3xl font-black text-dark tracking-tighter tabular-nums">{s.value}</p>
+                  <p className={`text-[11px] mt-1 font-bold uppercase tracking-wide ${s.color}`}>{s.sub}</p>
                 </div>
               </div>
             ))}
@@ -186,26 +191,26 @@ export default function DashboardClient({ user, topicStats, eloHistory, intervie
             <ActivityGrid streakCount={user.streak_count} />
           </div>
 
-          {/* Daily challenge banner */}
-          <div className="bg-white border border-border rounded-xl p-4 mb-4 flex items-center gap-4">
-            <div className="w-11 h-11 rounded-xl bg-brand-light flex items-center justify-center text-brand flex-shrink-0">
-              <Plus className="w-5 h-5" />
+          <div className="gradient-brand text-white rounded-2xl p-6 mb-6 flex items-center gap-6 shadow-xl shadow-brand/20 relative overflow-hidden animate-pulse-slow">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 blur-3xl rounded-full -mr-20 -mt-20" />
+            <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-lg flex items-center justify-center text-white flex-shrink-0 animate-float shadow-inner">
+              <Plus className="w-8 h-8" strokeWidth={3} />
             </div>
-            <div className="flex-1">
-              <p className="text-xs text-muted mb-0.5">Today&apos;s challenge</p>
-              <p className="text-sm font-semibold text-dark">
-                Complete a session to start your daily challenge
-              </p>
-              <div className="flex gap-2 mt-2">
-                <span className="badge-blue">Elo {user.elo_rating}</span>
-                <span className="badge-green">+1.1x streak bonus</span>
+            <div className="flex-1 relative z-10">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70 mb-1">Today&apos;s challenge</p>
+              <h3 className="text-xl font-black tracking-tight text-white mb-2">
+                Elevate your skills starting today.
+              </h3>
+              <div className="flex gap-2">
+                <span className="bg-white/20 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-white/20">Elo {user.elo_rating}</span>
+                <span className="bg-emerald-400/20 text-emerald-100 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-emerald-400/20">+1.1x streak bonus</span>
               </div>
             </div>
             <Link
               href="/session/new"
-              className="bg-brand text-white text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-brand-dark transition flex-shrink-0"
+              className="bg-white text-brand text-sm font-black px-8 py-3.5 rounded-xl hover:bg-brand-light transition-all flex-shrink-0 shadow-lg active:scale-95 uppercase tracking-widest"
             >
-              Start →
+              Start Practice
             </Link>
           </div>
 
@@ -276,7 +281,6 @@ export default function DashboardClient({ user, topicStats, eloHistory, intervie
             </div>
           </div>
 
-          {/* Weak zones alert */}
           {weakZones.length > 0 && (
             <div className="bg-red-50 border-l-4 border-red-400 rounded-r-xl p-4 mb-4">
               <p className="text-xs font-bold text-red-700 uppercase tracking-wider mb-2">
@@ -289,7 +293,10 @@ export default function DashboardClient({ user, topicStats, eloHistory, intervie
                   </span>
                 ))}
               </div>
-              <Link href="/session/new?mode=weak_zones" className="inline-block mt-3 text-xs font-semibold text-red-700 hover:underline">
+              <Link 
+                href={`/session/new?mode=weak_zones&topics=${encodeURIComponent(Array.from(new Set(weakZones.map(z => z.topic))).join(','))}&subtopics=${encodeURIComponent(weakZones.map(z => z.subtopic).join(','))}`}
+                className="inline-flex items-center mt-3 text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors"
+              >
                 Fix these now →
               </Link>
             </div>
@@ -301,20 +308,20 @@ export default function DashboardClient({ user, topicStats, eloHistory, intervie
             {topicStats.length === 0 ? (
               <p className="text-sm text-muted">No questions attempted yet. Pick a topic to start.</p>
             ) : (
-              <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+              <div className="grid grid-cols-1 gap-y-3">
                 {topicStats.map(ts => {
                   const total = ts.solved_count + ts.fail_count
                   const pct = total === 0 ? 0 : Math.round((ts.solved_count / total) * 100)
                   const barColor = pct >= 70 ? '#059669' : pct >= 40 ? '#D97706' : '#DC2626'
                   return (
                     <div key={ts.id} className="flex items-center gap-3">
-                      <span className="text-xs text-mid w-28 flex-shrink-0 capitalize">
+                      <span className="text-xs text-mid w-48 flex-shrink-0 capitalize leading-tight">
                         {ts.subtopic.replace(/_/g, ' ')}
                       </span>
-                      <div className="flex-1 h-1.5 bg-surface rounded-full overflow-hidden">
-                        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: barColor }} />
+                      <div className="flex-1 h-1.5 bg-surface rounded-full overflow-hidden min-w-0">
+                        <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: barColor }} />
                       </div>
-                      <span className="text-xs font-semibold text-dark w-8 text-right">{pct}%</span>
+                      <span className="text-xs font-semibold text-dark w-10 text-right flex-shrink-0">{pct}%</span>
                     </div>
                   )
                 })}

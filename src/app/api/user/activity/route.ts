@@ -34,10 +34,12 @@ export async function GET(req: NextRequest) {
 
   if (!attempts) return NextResponse.json([])
 
-  // 3. Count by date string (YYYY-MM-DD)
+  // 3. Count by IST date string (YYYY-MM-DD)
+  const { getISTDateString } = require('@/lib/date-utils')
   const activityMap: Record<string, number> = {}
+  
   attempts.forEach(a => {
-    const dateStr = a.created_at.split('T')[0]
+    const dateStr = getISTDateString(new Date(a.created_at))
     activityMap[dateStr] = (activityMap[dateStr] || 0) + 1
   })
 

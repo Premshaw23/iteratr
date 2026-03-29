@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json()
-  const { topic = 'arrays', customPrompt, language = 'python' } = body
+  const { topic = 'arrays', subtopic, customPrompt, language = 'cpp' } = body
   const { data: user } = await supabaseAdmin
     .from('users')
     .select('id, elo_rating')
@@ -73,10 +73,10 @@ export async function POST(req: NextRequest) {
     const adaptiveContext = await getAdaptiveMentorContext(session.user.email)
 
     let generated: any
-    if (typeToGenerate === 'fill')      generated = await generateFill(topic, targetElo, adaptiveContext, customPrompt)
-    else if (typeToGenerate === 'order') generated = await generateOrder(topic, targetElo, adaptiveContext, customPrompt)
-    else if (typeToGenerate === 'code')  generated = await generateCodeSpace(topic, targetElo, language as any, adaptiveContext, customPrompt)
-    else                               generated = await generateMCQ(topic, targetElo, adaptiveContext, customPrompt)
+    if (typeToGenerate === 'fill')      generated = await generateFill(topic, targetElo, adaptiveContext, customPrompt, subtopic)
+    else if (typeToGenerate === 'order') generated = await generateOrder(topic, targetElo, adaptiveContext, customPrompt, subtopic)
+    else if (typeToGenerate === 'code')  generated = await generateCodeSpace(topic, targetElo, language as any, adaptiveContext, customPrompt, subtopic)
+    else                               generated = await generateMCQ(topic, targetElo, adaptiveContext, customPrompt, subtopic)
 
     // Save to DB so we reuse it for other users
     const { data: saved, error } = await supabaseAdmin
@@ -96,9 +96,11 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (error) {
-      console.error('Error saving question:', error)
-      // Still return the generated question even if save fails
-      return NextResponse.json({ question: generated, source: 'generated' })
+      console.error('CRITICAL: DB Save Failure for dynamic question:', error)
+      return NextResponse.json({ 
+        error: 'Failed to record generated question in database',
+        details: error.message
+      }, { status: 500 })
     }
 
     return NextResponse.json({ question: saved, source: 'generated' })

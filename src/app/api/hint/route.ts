@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
 
   // For Code questions — use the ReAct agent via Gemini
   try {
-    const hint = await generateHint({
+    const { hint, reasoning } = await generateHint({
       problem_statement: question.problem_statement,
       user_code,
       error_output,
@@ -52,6 +52,8 @@ export async function POST(req: NextRequest) {
       hint_level: hint_level as 1 | 2 | 3 | 4,
       hints_so_far,
     })
+
+    console.log('[AGENT REASONING]:', reasoning)
 
     return NextResponse.json({ hint, source: 'generated' })
 

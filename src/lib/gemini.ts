@@ -152,7 +152,8 @@ export async function generateMCQ(
   topic: string,
   targetElo: number,
   adaptiveContext: string = '',
-  customPrompt?: string
+  customPrompt?: string,
+  specificSubtopic?: string
 ): Promise<GeneratedMCQ> {
   const systemPrompt = `You are an expert computer science educator creating questions for an adaptive coding platform called iteratr.
 ${adaptiveContext ? `MENTOR CONTEXT:\n${adaptiveContext}` : ''}
@@ -161,16 +162,17 @@ For wrong answer options (distractors), always base them on ACTUAL misconception
 Never give away the answer in the question itself.
 STRICT RULE: Do NOT use LaTeX math mode (e.g., $N$ or $i$) for variables. Use standard markdown backticks instead (e.g., \`N\` or \`i\`).
 ${customPrompt ? `Additional instructions from the user: ${customPrompt}` : ''}
+${specificSubtopic ? `CRITICAL: You MUST use exactly this string for the 'subtopic' field: "${specificSubtopic}"` : ''}
 You MUST respond with valid JSON only. No markdown, no explanation outside the JSON.`
 
-  const prompt = `Generate a multiple choice question about: ${topic}
+  const prompt = `Generate a multiple choice question about: ${specificSubtopic || topic}
 Target difficulty Elo: ${targetElo} (scale: 800=beginner, 1200=intermediate, 1600=advanced)
 
 STRICT JSON format — return ONLY this:
 {
   "type": "mcq",
   "topic": "${topic}",
-  "subtopic": "specific subtopic within ${topic}",
+  "subtopic": "${specificSubtopic || `specific subtopic within ${topic}`}",
   "difficulty_elo": ${targetElo},
   "problem_statement": "the full question text",
   "payload": {
@@ -219,7 +221,7 @@ export interface HintRequest {
   hints_so_far:      string[]
 }
 
-export async function generateHint(req: HintRequest): Promise<string> {
+export async function generateHint(req: HintRequest): Promise<{ hint: string, reasoning: string }> {
   const levelDescriptions = {
     1: 'Explain WHY the submitted code/answer is logically wrong. Do NOT point toward the correct solution. Focus on what conceptual gap caused the error.',
     2: 'Give a directional nudge toward the general concept they need. Do not name the exact approach or algorithm.',
@@ -227,10 +229,17 @@ export async function generateHint(req: HintRequest): Promise<string> {
     4: 'Give a complete explanation with annotated code. This is the final hint — be thorough.',
   }
 
-  const systemPrompt = `You are a Socratic coding mentor. Your ONE rule: never give the answer directly unless it's Level 4.
-You reason about WHY the student failed, then give a hint calibrated to close THAT specific gap.
-STRICT RULE: Do NOT use LaTeX math mode (e.g., $N$ or $i$) for variables. Use standard markdown backticks instead (e.g., \`N\` or \`i\`).
-At Level 1-3, a student should still have to think. At Level 4, give the full solution with explanation.`
+  const systemPrompt = `You are an agentic Socratic coding mentor. 
+Your process is REASON -> ACT -> HINT.
+1. REASON: Analyze the user's code, the failed test case, and the error output. Identify the EXACT conceptual gap.
+2. ACT: Select the most helpful strategy for the requested hint level.
+3. HINT: Generate the final hint text.
+
+STRICT RULES:
+- Never give the answer directly unless it's Level 4.
+- At Level 1-3, a student should still have to think.
+- Do NOT use LaTeX math mode ($N$). Use backticks (\`N\`).
+- Return a JSON object with 'reasoning' and 'hint'.`
 
   const prompt = `
 Problem: ${req.problem_statement}
@@ -249,12 +258,21 @@ ${req.failed_test}
 Previous hints given:
 ${req.hints_so_far.length > 0 ? req.hints_so_far.join('\n') : 'None yet'}
 
-Generate a Level ${req.hint_level} hint.
-Level ${req.hint_level} instruction: ${levelDescriptions[req.hint_level]}
+Current Level: ${req.hint_level}
+Instruction for this level: ${levelDescriptions[req.hint_level]}
 
-Respond with ONLY the hint text. No preamble, no label, just the hint itself.`
+Return JSON:
+{
+  "reasoning": "Internal thought process analyzing why the user is wrong and what they missed",
+  "hint": "The actual Socratic hint to show the user"
+}`
 
-  return await callGemini(prompt, systemPrompt)
+  const raw = await callGemini(prompt, systemPrompt)
+  const json = JSON.parse(extractJSON(raw))
+  return {
+    hint:      json.hint,
+    reasoning: json.reasoning
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -297,7 +315,8 @@ export async function generateFill(
   topic: string,
   targetElo: number,
   adaptiveContext: string = '',
-  customPrompt?: string
+  customPrompt?: string,
+  specificSubtopic?: string
 ): Promise<GeneratedFill> {
   const systemPrompt = `You are an expert computer science educator creating "Fill in the Blank" questions for iteratr.
 ${adaptiveContext ? `MENTOR CONTEXT:\n${adaptiveContext}` : ''}
@@ -305,16 +324,17 @@ Your goal is to choose blanks that reveal a conceptual gap, not syntax trivia.
 Example: "A recursive function must have a ___ case to stop..." -> blank: "base".
 Do NOT use LaTeX math mode ($N$). Use standard backticks (\`N\`).
 ${customPrompt ? `Additional instructions: ${customPrompt}` : ''}
+${specificSubtopic ? `CRITICAL: You MUST use exactly this string for the 'subtopic' field: "${specificSubtopic}"` : ''}
 You MUST respond with valid JSON only.`
 
-  const prompt = `Generate a Fill in the Blank question about: ${topic}
+  const prompt = `Generate a Fill in the Blank question about: ${specificSubtopic || topic}
 Target difficulty Elo: ${targetElo}
 
 STRICT JSON format:
 {
   "type": "fill",
   "topic": "${topic}",
-  "subtopic": "specific subtopic",
+  "subtopic": "${specificSubtopic || 'specific subtopic'}",
   "difficulty_elo": ${targetElo},
   "problem_statement": "The text with exactly 1-3 blanks represented as '___' (three underscores).",
   "payload": {
@@ -354,23 +374,25 @@ export async function generateOrder(
   topic: string,
   targetElo: number,
   adaptiveContext: string = '',
-  customPrompt?: string
+  customPrompt?: string,
+  specificSubtopic?: string
 ): Promise<GeneratedOrder> {
   const systemPrompt = `You are an expert educator creating "Drag to Order" procedural questions for iteratr.
 ${adaptiveContext ? `MENTOR CONTEXT:\n${adaptiveContext}` : ''}
 Your goal is to test sequential understanding (e.g. algorithms, system flows, OS boot sequences).
 STRICT RULE: Do NOT use LaTeX math mode ($N$). Use backticks (\`N\`).
 ${customPrompt ? `Additional instructions: ${customPrompt}` : ''}
+${specificSubtopic ? `CRITICAL: You MUST use exactly this string for the 'subtopic' field: "${specificSubtopic}"` : ''}
 You MUST respond with valid JSON only.`
 
-  const prompt = `Generate a Drag to Order question about: ${topic} (focus on a procedure or process)
+  const prompt = `Generate a Drag to Order question about: ${specificSubtopic || topic} (focus on a procedure or process)
 Target difficulty Elo: ${targetElo}
 
 STRICT JSON format:
 {
   "type": "order",
   "topic": "${topic}",
-  "subtopic": "specific specific subtopic",
+  "subtopic": "${specificSubtopic || 'specific specific subtopic'}",
   "difficulty_elo": ${targetElo},
   "problem_statement": "The goal: e.g. 'Arrange the steps of a TCP handshake in the correct order.'",
   "payload": {
@@ -404,16 +426,22 @@ Rules:
 export async function generateCodeSpace(
   topic: string,
   targetElo: number,
-  language: 'python' | 'cpp' | 'javascript' = 'python',
+  language: 'python' | 'cpp' | 'javascript' = 'cpp',
   adaptiveContext: string = '',
-  customPrompt?: string
+  customPrompt?: string,
+  specificSubtopic?: string
 ): Promise<GeneratedCode> {
-  const systemPrompt = `You are a senior Software Engineer creating coding challenges for iteratr.
+  const systemPrompt = `You are a Senior Software Engineer creating HIGH-FIDELITY coding challenges for iteratr.
 ${adaptiveContext ? `MENTOR CONTEXT:\n${adaptiveContext}` : ''}
-Your goal is to test logic and algorithm implementation.
-Avoid boilerplate — provide a clean scaffold (method signature + docstring).
-Generate 3-5 hidden test cases including edge cases (empty input, large values, etc.).
-STRICT JSON format.`
+Your goal is to test logic and algorithm implementation. Avoid boilerplate — provide a clean scaffold.
+
+STRICT FORMATTING RULES:
+1. Use Markdown backticks for variable names (like \`nums\`) ONLY in the 'problem_statement' field.
+2. NEVER use backticks around variable names, function names, or types in the 'scaffold', 'hidden_tests', or any other code-only fields. These must be valid, executable code.
+3. Use bolding (**) for crucial constraints in the description.
+3. Use Markdown code blocks for examples.
+4. Use a clear structure: Description, Example, Technical Notes/Constraints.
+Do NOT include the subtopic in the problem statement — it will be displayed separately as a heading.`
 
   const prompt = `Generate a Coding Challenge about: ${topic}
 Language: ${language}
@@ -581,7 +609,8 @@ export async function generateInterviewResponse(
   problem: string,
   history: InterviewMessage[],
   userCode: string,
-  style: string = 'neutral'
+  style: string = 'neutral',
+  memoryContext: string = ''
 ): Promise<string> {
   const styles: Record<string, string> = {
     friendly: "You are a warm, encouraging mentor. You nudge them with kindness and analogies.",
@@ -591,6 +620,7 @@ export async function generateInterviewResponse(
 
   const systemPrompt = `You are a Senior Technical Interviewer at a top-tier tech company. 
   ${styles[style] || styles.neutral}
+  ${memoryContext ? `\n\n[HISTORICAL MEMORY]: ${memoryContext}` : ''}
   
   CURRENT PROBLEM: ${problem}
   
@@ -625,6 +655,40 @@ export async function generateInterviewResponse(
   ${history[history.length - 1]?.content || "[Interview Started]"}
 
   Generate your response as the INTERVIEWER.`
+
+  return await callGemini(prompt, systemPrompt)
+}
+
+// ─────────────────────────────────────────────────────────────
+// SILENT GRADER AGENT (Phase 3)
+// ─────────────────────────────────────────────────────────────
+
+export async function generateSilentGraderFeedback(
+  problem: string,
+  history: InterviewMessage[],
+  userCode: string
+): Promise<string> {
+  const systemPrompt = `You are the "Silent Grader" agent. You run invisibly in the background.
+Your job is to monitor the candidate's communication, logic, and problem-solving approach.
+You do NOT speak to the candidate. You write brief, clinical observations for the database.
+Focus on:
+1. Did they explain their complexity?
+2. Did they miss an edge case initially?
+3. Is their communication clear or scattered?
+Keep it to 2-3 bullet points.`
+
+  const conversationText = history.map(m => `${m.role.toUpperCase()}: ${m.content}`).join('\n')
+
+  const prompt = `
+PROBLEM: ${problem}
+CURRENT CODE:
+\`\`\`
+${userCode}
+\`\`\`
+HISTORY:
+${conversationText}
+
+Analyze the candidate's performance so far and write your internal grading notes.`
 
   return await callGemini(prompt, systemPrompt)
 }

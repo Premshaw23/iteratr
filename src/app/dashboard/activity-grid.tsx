@@ -154,7 +154,7 @@ export default function ActivityGrid({
 
         {/* Year Selector */}
         <div className="flex items-center gap-1.5 bg-[#F4F4F4]/70 p-1.2 rounded-[14px] border border-slate-100 shadow-inner">
-           {[2026, 2025].map(y => (
+           {[new Date().getFullYear(), new Date().getFullYear() - 1].map(y => (
              <button
                key={y}
                onClick={() => setViewYear(y)}

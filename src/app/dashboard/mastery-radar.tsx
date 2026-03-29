@@ -14,63 +14,85 @@ interface Props {
   stats: TopicStatsRow[]
 }
 
+const TOPIC_LABELS: Record<string, string> = {
+  arrays: 'ARRAYS',
+  trees: 'TREES',
+  graphs: 'GRAPHS',
+  dynamic_programming: 'DYN. PROG',
+  linked_lists: 'LINKED LISTS',
+  system_design: 'SYS DESIGN',
+  os_concepts: 'OS',
+  networking: 'NETWORKING',
+  mixed: 'MIXED',
+}
+
+const ALL_TOPICS = Object.keys(TOPIC_LABELS)
+
 export default function MasteryRadar({ stats }: Props) {
-  // 1. Group by Topic and calculate avg pct
+  // Group by topic and calculate mastery %
   const topicMap: Record<string, { solved: number; total: number }> = {}
 
-  stats.forEach(s => {
-    if (!topicMap[s.topic]) {
-      topicMap[s.topic] = { solved: 0, total: 0 }
-    }
-    topicMap[s.topic].solved += s.solved_count
-    topicMap[s.topic].total += (s.solved_count + s.fail_count)
+  // Initialize all topics at 0
+  ALL_TOPICS.forEach(t => {
+    topicMap[t] = { solved: 0, total: 0 }
   })
 
-  // 2. Format for Recharts
-  let data = Object.entries(topicMap).map(([topic, counts]) => {
+  // Fill in actual data
+  stats.forEach(s => {
+    const topic = s.topic
+    if (topicMap[topic] !== undefined) {
+      topicMap[topic].solved += s.solved_count
+      topicMap[topic].total += (s.solved_count + s.fail_count)
+    }
+  })
+
+  // Only show topics that have been attempted OR are always-visible anchor topics
+  const anchorTopics = ['arrays', 'trees', 'graphs', 'dynamic_programming', 'linked_lists', 'system_design']
+  
+  const topicsWithData = Object.keys(topicMap).filter(t => 
+    topicMap[t].total > 0 || anchorTopics.includes(t)
+  )
+
+  const data = topicsWithData.map(topic => {
+    const counts = topicMap[topic]
     const pct = counts.total === 0 ? 0 : Math.round((counts.solved / counts.total) * 100)
     return {
-      subject: topic.replace(/_/g, ' ').toUpperCase(),
-      A:       Math.max(pct, 10), // minimum for visual
+      subject: TOPIC_LABELS[topic] || topic.toUpperCase(),
+      A: Math.max(pct, 5), // minimum 5 for visual polygon shape
       fullMark: 100,
     }
   })
 
-  // 3. Ensure at least 3 points for a radar polygon
-  if (data.length === 1) {
-    data.push({ subject: 'TREES', A: 0, fullMark: 100 })
-    data.push({ subject: 'GRAPHS', A: 0, fullMark: 100 })
-  } else if (data.length === 2) {
-    data.push({ subject: 'DYNAMIC PROG.', A: 0, fullMark: 100 })
+  if (data.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-center p-8 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+        <p className="text-xs text-muted font-medium italic">No topic data yet. Start a session!</p>
+      </div>
+    )
   }
-
-  if (data.length === 0) return (
-    <div className="flex flex-col items-center justify-center h-full text-center p-8 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
-      <p className="text-xs text-muted font-medium italic">No topic data yet. Start a session!</p>
-    </div>
-  )
 
   return (
     <div className="w-full h-full min-h-[240px]">
       <ResponsiveContainer width="100%" height={240}>
-        <RadarChart cx="50%" cy="50%" outerRadius="75%" data={data}>
+        <RadarChart cx="50%" cy="50%" outerRadius="65%" data={data}>
           <PolarGrid stroke="#E2E8F0" />
-          <PolarAngleAxis 
-            dataKey="subject" 
-            tick={{ fill: '#94A3B8', fontSize: 10, fontWeight: 600 }}
+          <PolarAngleAxis
+            dataKey="subject"
+            tick={{ fill: '#64748b', fontSize: 9, fontWeight: 700 }}
           />
-          <PolarRadiusAxis 
-            angle={90} 
-            domain={[0, 100]} 
-            tick={false} 
-            axisLine={false} 
+          <PolarRadiusAxis
+            angle={90}
+            domain={[0, 100]}
+            tick={false}
+            axisLine={false}
           />
           <Radar
             name="Mastery"
             dataKey="A"
             stroke="#2D4EF5"
             fill="#2D4EF5"
-            fillOpacity={0.15}
+            fillOpacity={0.2}
+            strokeWidth={2}
           />
         </RadarChart>
       </ResponsiveContainer>

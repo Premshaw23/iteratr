@@ -13,6 +13,7 @@ import { Code2, ChevronRight, Lightbulb, CheckCircle2, XCircle, Play, Send, Layo
 
 interface SessionConfig {
   topics:            string[]
+  subtopics?:        string[]
   difficulty:        string
   style:             string
   timer:             string
@@ -46,6 +47,27 @@ export default function PlayPage() {
   const [loadingHint,   setLoadingHint] = useState(false)
   const [submitting,    setSubmitting]  = useState(false)
   const [startTime]                     = useState(Date.now())
+  const [leftWidth,     setLeftWidth]   = useState(40) // Percentage
+  const [isResizing,    setIsResizing]  = useState(false)
+
+  // ── PANEL RESIZING (Phase 3) ──────────────────────────────────
+  const startResizing = useCallback(() => setIsResizing(true), [])
+  const stopResizing = useCallback(() => setIsResizing(false), [])
+  const resize = useCallback((mouseMoveEvent: MouseEvent) => {
+    if (isResizing) {
+      const newWidth = (mouseMoveEvent.clientX / window.innerWidth) * 100
+      if (newWidth > 20 && newWidth < 80) setLeftWidth(newWidth)
+    }
+  }, [isResizing])
+
+  useEffect(() => {
+    window.addEventListener('mousemove', resize)
+    window.addEventListener('mouseup', stopResizing)
+    return () => {
+      window.removeEventListener('mousemove', resize)
+      window.removeEventListener('mouseup', stopResizing)
+    }
+  }, [resize, stopResizing])
 
   useEffect(() => {
     const raw = sessionStorage.getItem('session_config')
@@ -190,6 +212,7 @@ export default function PlayPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         topic:        config.topics[Math.floor(Math.random() * config.topics.length)],
+        subtopic:     config.subtopics?.[Math.floor(Math.random() * config.subtopics.length)],
         customPrompt: config.customPrompt || undefined,
         language:     config.language,
       }),
@@ -266,7 +289,7 @@ export default function PlayPage() {
 
     if (!isFill) {
       return (
-        <div className="prose prose-slate prose-sm max-w-none prose-p:leading-relaxed prose-code:bg-surface prose-code:px-1 prose-code:rounded prose-pre:bg-zinc-900 prose-pre:text-white">
+        <div className="prose prose-slate prose-sm max-w-none prose-p:leading-relaxed prose-code:bg-slate-100 prose-code:text-brand-dark prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:font-bold prose-code:before:content-none prose-code:after:content-none prose-pre:bg-zinc-950 prose-pre:text-white">
           <ReactMarkdown 
             remarkPlugins={markdownPlugins} 
             rehypePlugins={rehypePlugins}
@@ -304,6 +327,7 @@ export default function PlayPage() {
               {i < parts.length - 1 && (
                 <input
                   type="text"
+                  placeholder="····"
                   autoFocus={i === 0}
                   value={fillAnswers[i] || ''}
                   disabled={phase !== 'answering' || submitting}
@@ -312,14 +336,18 @@ export default function PlayPage() {
                     vals[i] = e.target.value
                     setFillAnswers(vals)
                   }}
-                  className={`mx-1 px-2 py-0.5 min-w-[80px] border-b-2 text-center focus:outline-none transition ${
-                    phase === 'answering'
-                      ? 'border-brand/30 focus:border-brand bg-brand/5'
+                  className={`
+                    inline-block mx-1.5 px-2 py-0.5 min-w-[60px] 
+                    border-b-2 text-center focus:outline-none transition-all duration-200
+                    font-mono font-black placeholder:text-slate-400
+                    ${phase === 'answering'
+                      ? 'border-slate-200 hover:border-slate-300 focus:border-brand bg-transparent text-brand'
                       : isBlankCorrect 
-                        ? 'border-green-400 text-green-700 bg-green-50 shadow-inner rounded-md'
-                        : 'border-red-400 text-red-700 bg-red-50 shadow-inner rounded-md'
-                  }`}
-                  style={{ width: `${Math.max(80, (fillAnswers[i]?.length || 0) * 10 + 20)}px` }}
+                        ? 'border-emerald-400 text-emerald-600 bg-emerald-50/50 rounded-t-lg shadow-inner'
+                        : 'border-rose-400 text-rose-600 bg-rose-50/50 rounded-t-lg shadow-inner'
+                    }
+                  `}
+                  style={{ width: `${Math.max(60, (fillAnswers[i]?.length || 0) * 12 + 10)}px` }}
                 />
               )}
             </Fragment>
@@ -373,15 +401,27 @@ export default function PlayPage() {
           </div>
         </header>
 
-        <main className="flex-1 flex overflow-hidden">
+        <main className={`flex-1 flex overflow-hidden ${isResizing ? 'select-none cursor-col-resize' : ''}`}>
           {/* Left Panel: Problem */}
-          <div className="w-[450px] lg:w-[500px] border-r border-border bg-white overflow-y-auto p-8 custom-scrollbar">
+          <div 
+            className="border-r border-border bg-white overflow-y-auto p-8 custom-scrollbar relative"
+            style={{ width: `${leftWidth}%` }}
+          >
             <h1 className="text-2xl font-bold text-dark mb-4">{question.subtopic}</h1>
-            <div className="prose prose-sm prose-slate max-w-none mb-8">
-              {/* Note: In a real app we'd use react-markdown here */}
-              <div className="whitespace-pre-wrap text-[15px] leading-relaxed text-dark/80">
+            <div className="prose prose-slate max-w-none mb-8 
+              prose-p:text-[15px] prose-p:leading-relaxed prose-p:text-dark/90
+              prose-h2:text-xl prose-h2:font-black prose-h2:tracking-tight prose-h2:mt-8 prose-h2:mb-4 prose-h2:text-dark
+              prose-code:bg-slate-100 prose-code:text-brand-dark prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:font-bold prose-code:before:content-none prose-code:after:content-none
+              prose-strong:text-dark prose-strong:font-black
+              prose-pre:bg-zinc-950 prose-pre:border prose-pre:border-white/10 prose-pre:rounded-2xl prose-pre:p-4
+              prose-blockquote:border-l-4 prose-blockquote:border-brand prose-blockquote:bg-brand-light/30 prose-blockquote:py-1 prose-blockquote:px-4 prose-blockquote:rounded-r-xl prose-blockquote:italic prose-blockquote:text-mid
+            ">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm, remarkMath]}
+                rehypePlugins={[rehypeKatex]}
+              >
                 {question.problem_statement}
-              </div>
+              </ReactMarkdown>
             </div>
 
             {/* Hint & Feedback Section */}
@@ -410,8 +450,16 @@ export default function PlayPage() {
             )}
           </div>
 
-          {/* Right Panel: Editor */}
-          <div className="flex-1 flex flex-col bg-[#1e1e1e]">
+          <div className="flex-1 flex flex-col bg-[#1e1e1e] relative">
+            {/* Draggable Divider */}
+            <div
+              onMouseDown={startResizing}
+              className={`absolute top-0 left-0 w-1.5 h-full -ml-[3px] z-[60] cursor-col-resize transition-colors hover:bg-brand/50 group ${isResizing ? 'bg-brand' : ''}`}
+            >
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                 <div className="w-1 h-8 bg-brand/20 rounded-full" />
+              </div>
+            </div>
             {/* Editor Toolbar */}
             <div className="h-11 bg-[#252525] border-b border-[#333] flex items-center justify-between px-4 shrink-0">
                <div className="flex items-center gap-3">
@@ -447,10 +495,15 @@ export default function PlayPage() {
                   ) : (
                     <button
                       onClick={handleNext}
-                      className="flex items-center gap-2 px-6 py-1.5 bg-brand text-white text-xs font-black rounded-lg hover:bg-brand-dark transition shadow-lg shadow-brand/20"
+                      disabled={phase === 'loading_next'}
+                      className="flex items-center gap-2 px-6 py-1.5 bg-brand text-white text-xs font-black rounded-lg hover:bg-brand-dark transition shadow-lg shadow-brand/20 disabled:opacity-50"
                     >
-                      {config.question_number >= config.total_questions ? 'Finish Session' : 'Next Challenge'}
-                      <ChevronRight className="w-4 h-4" />
+                      {phase === 'loading_next' ? 'Generating...' : (
+                        <>
+                          {config.question_number >= config.total_questions ? 'Finish Session' : 'Next Challenge'}
+                          <ChevronRight className="w-4 h-4" />
+                        </>
+                      )}
                     </button>
                   )}
                </div>
@@ -497,211 +550,302 @@ export default function PlayPage() {
   }
 
   return (
-    <div className="min-h-screen bg-surface">
-
+    <div className="min-h-screen bg-surface font-sans antialiased text-slate-900">
       {/* Session topbar */}
-      <header className="h-12 bg-white border-b border-border flex items-center justify-between px-5">
-        <span className="text-lg font-bold text-brand">iteratr</span>
+      <header className="h-16 bg-white/80 backdrop-blur-md border-b border-slate-200/60 flex items-center justify-between px-8 sticky top-0 z-50">
+        <div className="flex items-center gap-6">
+          <span className="text-2xl font-black text-brand tracking-tighter hover:opacity-90 transition cursor-default">itera<span className="text-slate-900">tr</span></span>
+          <div className="h-6 w-px bg-slate-200" />
+          <div className="flex items-center gap-2">
+            <span className="px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-[10px] font-black uppercase tracking-widest text-slate-500">
+              Session Live
+            </span>
+          </div>
+        </div>
 
-        {/* Progress dots */}
-        <div className="flex items-center gap-2">
-          {Array.from({ length: config.total_questions }).map((_, i) => (
-            <div
-              key={i}
-              className={`w-2 h-2 rounded-full transition ${
-                i < config.question_number - 1 ? 'bg-green-400'
-                : i === config.question_number - 1 ? 'bg-brand'
-                : 'bg-border'
-              }`}
-            />
-          ))}
-          <span className="text-xs text-mid ml-2">
-            {config.question_number} / {config.total_questions}
+        {/* Progress Navigation */}
+        <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-3">
+          <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200/60 p-1.5 rounded-full shadow-inner">
+            {Array.from({ length: config.total_questions }).map((_, i) => (
+              <div
+                key={i}
+                className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                  i < config.question_number - 1 ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]'
+                  : i === config.question_number - 1 ? 'bg-brand w-4 shadow-[0_0_12px_rgba(45,78,245,0.3)]'
+                  : 'bg-slate-200'
+                }`}
+              />
+            ))}
+          </div>
+          <span className="text-[11px] font-black text-slate-400 uppercase tracking-tighter">
+            {config.question_number} <span className="text-slate-300 mx-0.5">/</span> {config.total_questions}
           </span>
         </div>
 
         <button
           onClick={() => { sessionStorage.removeItem('session_config'); router.push('/dashboard') }}
-          className="text-xs text-muted hover:text-dark"
+          className="group flex items-center gap-2 px-4 py-2 text-xs font-bold text-slate-400 hover:text-red-500 hover:bg-red-50/50 rounded-xl transition-all"
         >
-          Exit session
+          <XCircle size={14} className="opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
+          Exit Session
         </button>
       </header>
 
-      {/* Main content */}
-      <div className="max-w-2xl mx-auto px-4 py-8">
-
-        {/* Question card */}
-        <div className="bg-white border border-border rounded-2xl p-6 mb-4">
-
-          {/* Meta badges */}
-          <div className="flex flex-wrap gap-2 mb-4">
-            <span className="badge-blue capitalize">{question.topic?.replace(/_/g,' ')}</span>
-            <span className="badge-purple font-bold uppercase tracking-tight">{question.type}</span>
-            <span className="badge-amber font-mono">Elo {question.difficulty_elo}</span>
-          </div>
-
-          {/* Question Statement */}
-          <div className="mb-6">
-            {renderStatement()}
-          </div>
-
-          {/* MCQ Options */}
-          {isMCQ && (
-            <div className="space-y-2">
-              {(question.payload as MCQPayload).options.map((option: string, i: number) => (
-                <div
-                  key={i}
-                  className={optionStyle(i)}
-                  onClick={() => phase === 'answering' && setSelected(i)}
-                >
-                  <span className={`w-6 h-6 rounded-md border flex items-center justify-center text-xs font-bold flex-shrink-0 ${
-                    selected === i && phase === 'answering' ? 'bg-brand text-white border-brand' : 'border-border text-muted'
-                  }`}>
-                    {optionKeys[i]}
-                  </span>
-                  <span className="text-dark">{option}</span>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Drag to Order List */}
-          {isOrder && (
-            <div className="space-y-2">
-              {orderSteps.map((step, i) => (
-                <div
-                  key={step}
-                  draggable={phase === 'answering'}
-                  onDragStart={() => handleDragStart(i)}
-                  onDragOver={(e) => handleDragOver(e, i)}
-                  onDragEnd={() => setDraggedIdx(null)}
-                  className={`flex items-center gap-3 p-4 rounded-xl border transition group ${
-                    phase === 'answering'
-                      ? 'bg-white border-border hover:border-brand cursor-grab active:cursor-grabbing'
-                      : isCorrect
-                        ? 'bg-green-50 border-green-200'
-                        : 'bg-red-50 border-red-200'
-                  } ${draggedIdx === i ? 'opacity-40 grayscale scale-[0.98]' : 'opacity-100'}`}
-                >
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 border transition ${
-                    phase === 'answering'
-                      ? 'bg-surface border-border text-muted group-hover:border-brand group-hover:text-brand'
-                      : isCorrect
-                        ? 'bg-green-100 border-green-300 text-green-700'
-                        : 'bg-red-100 border-red-300 text-red-700'
-                  }`}>
-                    {i + 1}
+      {/* Main content wrapper */}
+      <div className="max-w-4xl mx-auto px-6 py-12 flex flex-col min-h-[calc(100vh-64px)]">
+        
+        {/* Dynamic Question Area */}
+        <div className="flex-1">
+          <div className="bg-white border border-slate-200/60 rounded-[32px] shadow-2xl shadow-slate-200/50 overflow-hidden relative group">
+            <div className="absolute top-0 left-0 w-full h-1.5 bg-brand/10 group-hover:bg-brand/20 transition-colors" />
+            
+            <div className="p-10">
+              {/* Question Header Meta */}
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-brand/10 border border-brand/10 rounded-full">
+                    <div className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse" />
+                    <span className="text-[10px] font-black text-brand uppercase tracking-widest leading-none">
+                      {question.topic?.replace(/_/g,' ')}
+                    </span>
                   </div>
-                  <span className={`text-sm font-medium ${
-                    phase === 'answering' ? 'text-dark' : isCorrect ? 'text-green-900' : 'text-red-900'
-                  }`}>
-                    {step}
-                  </span>
-                  {phase === 'answering' && (
-                    <div className="ml-auto text-border group-hover:text-brand transition">
-                      ::
+                  <div className="px-3 py-1.5 bg-slate-100 rounded-full">
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">
+                      {question.type}
+                    </span>
+                  </div>
+                </div>
+                <div className="px-3 py-1.5 bg-amber-50 border border-amber-100 rounded-full flex items-center gap-2">
+                   <LayoutList size={12} className="text-amber-600" />
+                   <span className="text-[10px] font-black text-amber-700 font-mono tracking-tighter">
+                     Elo {question.difficulty_elo}
+                   </span>
+                </div>
+              </div>
+
+              {/* Problem Container */}
+              <div className="mb-10 min-h-[120px]">
+                <div className="text-xl md:text-2xl font-bold text-slate-900 leading-snug tracking-tight mb-2">
+                  {question.subtopic}
+                </div>
+                <div className="pt-4 border-t border-slate-50">
+                  {renderStatement()}
+                </div>
+              </div>
+
+              {/* Interaction Elements */}
+              <div className="space-y-4">
+                {isMCQ && (
+                  <div className="grid grid-cols-1 gap-3">
+                    {(question.payload as MCQPayload).options.map((option: string, i: number) => (
+                      <div
+                        key={i}
+                        className={optionStyle(i)}
+                        onClick={() => phase === 'answering' && setSelected(i)}
+                      >
+                        <div className={`w-10 h-10 rounded-xl border flex items-center justify-center text-sm font-black transition-all shrink-0 ${
+                          selected === i && phase === 'answering' 
+                          ? 'bg-brand text-white border-brand shadow-[0_4px_12px_rgba(45,78,245,0.3)]' 
+                          : 'bg-slate-50 border-slate-200 text-slate-400 group-hover:border-slate-300'
+                        }`}>
+                          {optionKeys[i]}
+                        </div>
+                        <span className="text-[15px] font-semibold text-slate-700 leading-tight py-1">{option}</span>
+                        {phase === 'submitted' && (question.payload as MCQPayload).correct_index === i && (
+                          <div className="ml-auto text-emerald-500 pr-2">
+                            <CheckCircle2 size={24} />
+                          </div>
+                        )}
+                        {phase === 'submitted' && selected === i && !isCorrect && (
+                          <div className="ml-auto text-rose-500 pr-2">
+                            <XCircle size={24} />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {isOrder && (
+                  <div className="space-y-3">
+                    {orderSteps.map((step, i) => (
+                      <div
+                        key={step}
+                        draggable={phase === 'answering'}
+                        onDragStart={() => handleDragStart(i)}
+                        onDragOver={(e) => handleDragOver(e, i)}
+                        onDragEnd={() => setDraggedIdx(null)}
+                        className={`flex items-center gap-4 p-5 rounded-[20px] border transition-all duration-300 ${
+                          phase === 'answering'
+                            ? 'bg-white border-slate-200 hover:border-brand hover:shadow-lg hover:shadow-slate-200/50 cursor-grab active:cursor-grabbing group/order'
+                            : isCorrect
+                              ? 'bg-emerald-50 border-emerald-200'
+                              : 'bg-rose-50 border-rose-200'
+                        } ${draggedIdx === i ? 'opacity-40 grayscale scale-[0.98]' : 'opacity-100'}`}
+                      >
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black shrink-0 border transition-all ${
+                          phase === 'answering'
+                            ? 'bg-slate-50 border-slate-200 text-slate-400 group-hover/order:border-brand/30 group-hover/order:text-brand'
+                            : isCorrect
+                              ? 'bg-emerald-100 border-emerald-300 text-emerald-700'
+                              : 'bg-rose-100 border-rose-300 text-rose-700'
+                        }`}>
+                          {i + 1}
+                        </div>
+                        <span className={`text-[15px] font-semibold flex-1 ${
+                          phase === 'answering' ? 'text-slate-700' : isCorrect ? 'text-emerald-900' : 'text-rose-900'
+                        }`}>
+                          {step}
+                        </span>
+                        {phase === 'answering' && (
+                          <div className="text-slate-300 group-hover/order:text-brand/40 transition-colors px-2 cursor-grab">
+                            <GripVertical size={20} />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {isFill && phase === 'submitted' && (
+                  <div className="mt-8 pt-8 border-t border-slate-100 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4">The Complete Solution</span>
+                    <div className="flex flex-wrap gap-3">
+                      {(question.payload as FillPayload).blanks.map((b, i) => (
+                        <div key={i} className="flex items-center gap-3 px-4 py-2 bg-emerald-50/50 border border-emerald-100 rounded-2xl">
+                          <span className="text-[10px] font-black text-emerald-600 bg-emerald-100 w-6 h-6 flex items-center justify-center rounded-lg">{i + 1}</span>
+                          <span className="text-sm font-bold text-emerald-800 font-mono tracking-tight">{b.answer}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Global Feedback & Action Container (Pinned to bottom or flowing) */}
+        <div className="mt-10 space-y-6 pb-20">
+          
+          {/* Status Message */}
+          <div className="flex flex-col gap-4">
+            {hint && (
+              <div className="bg-amber-50 border border-amber-200/60 rounded-[24px] p-6 shadow-sm animate-in zoom-in-95 duration-300">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600">
+                      <Lightbulb size={18} />
+                    </div>
+                    <span className="text-xs font-black text-amber-700 uppercase tracking-widest">
+                      AI Mentor Hint · L{hintLevel}
+                    </span>
+                  </div>
+                  <div className="flex gap-1.5">
+                    {[1,2,3,4].map(l => (
+                      <div key={l} className={`w-6 h-1 rounded-full transition-all duration-500 ${l <= hintLevel ? 'bg-amber-500' : 'bg-amber-200'}`} />
+                    ))}
+                  </div>
+                </div>
+                <p className="text-[15px] font-medium text-amber-950 leading-relaxed italic pr-4">
+                  "{hint}"
+                </p>
+              </div>
+            )}
+
+            {feedback && phase === 'submitted' && (
+              <div className={`rounded-[24px] overflow-hidden border shadow-xl animate-in slide-in-from-top-4 duration-500 ${
+                isCorrect ? 'bg-emerald-50 border-emerald-200 shadow-emerald-100/50' : 'bg-rose-50 border-rose-200 shadow-rose-100/50'
+              }`}>
+                <div className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      {isCorrect ? (
+                        <CheckCircle2 className="text-emerald-500" size={24} />
+                      ) : (
+                        <XCircle className="text-rose-500" size={24} />
+                      )}
+                      <span className={`text-[12px] font-black uppercase tracking-widest ${isCorrect ? 'text-emerald-700' : 'text-rose-700'}`}>
+                        {isCorrect ? 'Solution Verified' : 'Conceptual Misalignment'}
+                      </span>
+                    </div>
+                    {eloChange !== null && (
+                      <div className={`px-4 py-2 rounded-xl text-sm font-black shadow-sm ${
+                        eloChange >= 0 ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'
+                      }`}>
+                        {eloChange >= 0 ? '▲' : '▼'}{Math.abs(eloChange)} Elo
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-[15px] font-medium leading-relaxed text-slate-800 pr-12">
+                    {feedback}
+                  </p>
+                  {eloAfter !== null && (
+                    <div className="mt-4 pt-4 border-t border-slate-200/20 flex items-center justify-between">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Global Technical Rating</span>
+                      <span className="text-xs font-black text-slate-600">NEW ELO: {eloAfter}</span>
                     </div>
                   )}
                 </div>
-              ))}
-            </div>
-          )}
-
-          {isFill && phase === 'submitted' && (
-            <div className="mt-6 pt-5 border-t border-zinc-100">
-              <span className="text-[12px] font-bold text-zinc-400 uppercase tracking-widest block mb-3">Expected Solutions</span>
-              <div className="flex flex-wrap gap-2">
-                {(question.payload as FillPayload).blanks.map((b, i) => (
-                  <div key={i} className="flex items-center gap-2 px-3 py-1.5 bg-green-50/50 border border-green-100 rounded-lg">
-                    <span className="text-[10px] font-black text-green-600 bg-green-100 w-5 h-5 flex items-center justify-center rounded-md">{i + 1}</span>
-                    <span className="text-sm font-bold text-green-800">{b.answer}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Hint panel */}
-        {hint && (
-          <div className="bg-amber-50 border-l-4 border-amber-400 rounded-r-xl p-4 mb-4">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-bold text-amber-700 uppercase tracking-wider">
-                Hint — level {hintLevel} of 4
-              </span>
-              <div className="flex gap-1">
-                {[1,2,3,4].map(l => (
-                  <div key={l} className={`w-5 h-1 rounded ${l <= hintLevel ? 'bg-amber-500' : 'bg-amber-200'}`} />
-                ))}
-              </div>
-            </div>
-            <p className="text-sm text-amber-900 leading-relaxed">{hint}</p>
-          </div>
-        )}
-
-        {/* Feedback panel */}
-        {feedback && phase === 'submitted' && (
-          <div className={`border-l-4 rounded-r-xl p-4 mb-4 ${
-            isCorrect
-              ? 'bg-green-50 border-green-400'
-              : 'bg-red-50 border-red-400'
-          }`}>
-            <p className="text-xs font-bold uppercase tracking-wider mb-1 ${isCorrect ? 'text-green-700' : 'text-red-700'}">
-              {isCorrect ? '✓ Correct' : '✗ Not quite'}
-            </p>
-            <p className="text-sm leading-relaxed text-dark">{feedback}</p>
-
-            {/* Elo change */}
-            {eloChange !== null && (
-              <div className="mt-3 flex items-center gap-2">
-                <span className={`text-sm font-bold ${eloChange >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                  {eloChange >= 0 ? '+' : ''}{eloChange} Elo
-                </span>
-                <span className="text-xs text-muted">→ {eloAfter} total</span>
               </div>
             )}
           </div>
-        )}
 
-        {/* Loading next */}
-        {phase === 'loading_next' && (
-          <div className="bg-white border border-border rounded-xl p-4 mb-4 text-center text-sm text-mid">
-            Generating next question...
+          {/* Action Footer */}
+          <div className="flex gap-4 sticky bottom-8 p-3 bg-white/50 backdrop-blur-xl border border-white rounded-[28px] shadow-2xl">
+            {phase === 'answering' && (
+              <>
+                <button
+                  onClick={handleHint}
+                  disabled={hintLevel >= 4 || loadingHint}
+                  className="px-8 py-4 bg-white border border-slate-200 rounded-[20px] text-sm font-black text-slate-500 hover:text-brand hover:border-brand/40 hover:bg-brand/5 transition-all flex items-center gap-3 disabled:opacity-40 shadow-sm grow-0 shrink-0"
+                >
+                  <Lightbulb size={18} className={loadingHint ? 'animate-pulse' : ''} />
+                  {loadingHint ? 'REASONING...' : hintLevel === 0 ? 'GET HINT' : `HINT ${hintLevel + 1}`}
+                </button>
+                <button
+                  onClick={handleSubmit}
+                  disabled={!(isMCQ ? selected !== null : isFill ? fillAnswers.length > 0 : true) || submitting}
+                  className="flex-1 bg-brand text-white font-bold px-10 py-4 rounded-[20px] hover:bg-brand-dark transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-brand/30 hover:shadow-brand/40 active:scale-[0.98] flex items-center justify-center gap-3 text-base"
+                >
+                  {submitting ? (
+                    <div className="flex items-center gap-3">
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span className="tracking-widest uppercase text-xs">Verifying Logic...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <Send size={18} />
+                      SUBMIT SOLUTION
+                    </>
+                  )}
+                </button>
+              </>
+            )}
+
+            {(phase === 'submitted' || phase === 'loading_next') && (
+              <button
+                onClick={handleNext}
+                disabled={phase === 'loading_next'}
+                className="flex-1 bg-brand text-white font-black py-5 rounded-[22px] hover:bg-brand-dark transition-all duration-500 shadow-2xl shadow-brand/40 flex items-center justify-center gap-3 active:scale-[0.98] animate-in slide-in-from-bottom-4"
+              >
+                {phase === 'loading_next' ? (
+                   <div className="flex items-center gap-3">
+                     <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                     <span className="tracking-widest uppercase text-xs">Generating Neural Path...</span>
+                   </div>
+                ) : (
+                  <>
+                    <span className="tracking-tight text-lg">
+                      {config.question_number >= config.total_questions ? 'FINISH & VIEW DASHBOARD' : 'NEXT CHALLENGE'}
+                    </span>
+                    <ChevronRight size={20} className="stroke-[3]" />
+                  </>
+                )}
+              </button>
+            )}
           </div>
-        )}
-
-        {/* Action buttons */}
-        <div className="flex gap-3">
-          {phase === 'answering' && (
-            <>
-              <button
-                onClick={handleSubmit}
-                disabled={!(isMCQ ? selected !== null : isFill ? fillAnswers.length > 0 : true) || submitting}
-                className="flex-1 bg-brand text-white font-semibold py-3 rounded-xl hover:bg-brand-dark transition disabled:opacity-40 disabled:cursor-not-allowed text-sm"
-              >
-                {submitting ? 'Checking...' : 'Submit answer'}
-              </button>
-              <button
-                onClick={handleHint}
-                disabled={hintLevel >= 4 || loadingHint}
-                className="px-5 py-3 border border-border rounded-xl text-sm font-medium text-mid hover:bg-surface transition disabled:opacity-40"
-              >
-                {loadingHint ? '...' : hintLevel === 0 ? 'Get hint' : `Hint ${hintLevel + 1}`}
-              </button>
-            </>
-          )}
-
-          {phase === 'submitted' && (
-            <button
-              onClick={handleNext}
-              className="flex-1 bg-brand text-white font-semibold py-3 rounded-xl hover:bg-brand-dark transition text-sm"
-            >
-              {config.question_number >= config.total_questions ? 'Finish session' : 'Next question →'}
-            </button>
-          )}
         </div>
-
       </div>
     </div>
   )

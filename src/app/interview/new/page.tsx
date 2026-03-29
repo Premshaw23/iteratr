@@ -52,7 +52,7 @@ function InterviewNewContent() {
   const [difficulty,      setDifficulty]  = useState('auto')
   const [style,           setStyle]       = useState('neutral')
   const [timer,           setTimer]       = useState('none')
-  const [language,        setLanguage]    = useState('python')
+  const [language,        setLanguage]    = useState('cpp')
   const [customPrompt,    setCustomPrompt]= useState('')
   const [starting,        setStarting]    = useState(false)
 

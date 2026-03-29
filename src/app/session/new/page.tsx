@@ -13,6 +13,7 @@ const TOPICS = [
   { id: 'system_design',      label: 'System design'    },
   { id: 'os_concepts',        label: 'OS concepts'      },
   { id: 'networking',         label: 'Networking'       },
+  { id: 'mixed',              label: 'Mixed / Weak Zones'},
 ]
 
 const DIFFICULTIES = [
@@ -59,10 +60,40 @@ function SessionNewContent() {
   const [style,           setStyle]       = useState('neutral')
   const [timer,           setTimer]       = useState('none')
   const [mode,            setMode]        = useState(modeParam)
-  const [language,        setLanguage]    = useState('python')
+  const [language,        setLanguage]    = useState('cpp')
   const [customPrompt,    setCustomPrompt]= useState('')
   const [starting,        setStarting]    = useState(false)
   const [weakZonesCount,  setWeakZonesCount] = useState(0)
+  const [subtopics,       setSubtopics]   = useState<string[]>(params.get('subtopics')?.split(',').filter(Boolean) || [])
+
+  // Auto-fill specialized prompt for weak zones
+  useEffect(() => {
+    const weakTopicsStr = params.get('topics')
+    const subTopicsStr = params.get('subtopics')
+    
+    if (mode === 'weak_zones' && weakTopicsStr && !customPrompt) {
+      const topicArray = weakTopicsStr.split(',').filter(Boolean)
+      setTopics(topicArray.length > 0 ? topicArray : [defaultTopic])
+      setDifficulty('easy')
+      setStyle('strict')
+      
+      const displaySubtopics = subTopicsStr 
+        ? subTopicsStr.split(',').map((t, i) => `${i + 1}. ${t.replace(/\+/g, ' ')}`).join('\n')
+        : topicArray.map((t, i) => `${i + 1}. ${t.replace(/_/g, ' ')}`).join('\n')
+      
+      setCustomPrompt(`Generate a weak-zone recovery session with focus on these specific weak areas:
+${displaySubtopics}
+
+Instructions:
+- Give me highly relevant questions targeting these exact points
+- Start from easy foundational level, then gradually increase difficulty
+- Mix question types: conceptual and code
+- Do NOT give direct answers immediately
+- If I get something wrong, guide me Socratically with hints
+- Focus on fixing conceptual misunderstandings, not just syntax
+- Be like a strict but helpful senior engineer`)
+    }
+  }, [mode, params, customPrompt, defaultTopic])
 
   // Fetch weak zones to show in the mode button
   useEffect(() => {
@@ -94,6 +125,7 @@ function SessionNewContent() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         topic:        selectedTopics[0],
+        subtopic:     subtopics.length > 0 ? subtopics[0] : undefined,
         customPrompt: customPrompt || undefined,
         language:     language,
       }),
@@ -104,6 +136,7 @@ function SessionNewContent() {
       // Store session config in sessionStorage for the question page
       sessionStorage.setItem('session_config', JSON.stringify({
         topics: selectedTopics,
+        subtopics,
         difficulty,
         style,
         timer,
@@ -112,7 +145,7 @@ function SessionNewContent() {
         customPrompt,
         current_question: data.question,
         question_number:  1,
-        total_questions:  mode === 'weak_zones' ? 3 : 5,
+        total_questions:  mode === 'weak_zones' ? 3 : mode === 'daily' ? 1 : 5,
         hints_used:       0,
       }))
       router.push('/session/play')

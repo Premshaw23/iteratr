@@ -29,6 +29,25 @@ export default function InterviewPlayPage() {
   const [showProblem, setShowProblem] = useState(true)
   const chatEndRef = useRef<HTMLDivElement>(null)
 
+  const [leftWidth, setLeftWidth] = useState(50)
+  const [isResizing, setIsResizing] = useState(false)
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return
+      const newWidth = (e.clientX / window.innerWidth) * 100
+      if (newWidth > 25 && newWidth < 75) setLeftWidth(newWidth)
+    }
+    const handleMouseUp = () => setIsResizing(false)
+
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [isResizing])
+
   useEffect(() => {
     const configRaw = sessionStorage.getItem('interview_config')
     if (!configRaw) {
@@ -185,10 +204,13 @@ export default function InterviewPlayPage() {
         </div>
       </header>
 
-      <main className="flex-1 flex overflow-hidden">
+      <main className={`flex-1 flex overflow-hidden ${isResizing ? 'select-none cursor-col-resize' : ''}`}>
         
         {/* LEFT: CHAT AREA */}
-        <section className="w-[450px] border-r border-white/5 flex flex-col bg-slate-950 relative">
+        <section 
+          className="border-r border-white/5 flex flex-col bg-slate-950 relative"
+          style={{ width: `${leftWidth}%` }}
+        >
           <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-none">
             {messages.map((m, i) => (
               <div key={i} className={`flex ${m.role === 'candidate' ? 'justify-end' : 'justify-start'}`}>
@@ -241,7 +263,12 @@ export default function InterviewPlayPage() {
         </section>
 
         {/* RIGHT: EDITOR AREA */}
-        <section className="flex-1 flex flex-col bg-slate-900 overflow-hidden">
+        <section className="flex-1 flex flex-col bg-slate-900 overflow-hidden relative">
+          {/* Draggable Divider */}
+          <div
+            onMouseDown={() => setIsResizing(true)}
+            className={`absolute top-0 left-0 w-1.5 h-full -ml-[3px] z-[60] cursor-col-resize transition-colors hover:bg-brand/50 ${isResizing ? 'bg-brand' : ''}`}
+          />
           
           {/* Header */}
           <div className="h-10 bg-slate-900/50 border-b border-white/5 flex items-center px-4 justify-between shrink-0">
