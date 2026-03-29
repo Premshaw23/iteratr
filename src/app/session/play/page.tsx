@@ -151,6 +151,28 @@ export default function PlayPage() {
     setLoadingHint(false)
   }
 
+  const handleEditorWillMount = (monaco: any) => {
+    monaco.editor.defineTheme('iteratr-dark', {
+      base: 'vs-dark',
+      inherit: true,
+      rules: [
+        { token: 'comment', foreground: '6272a4', fontStyle: 'italic' },
+        { token: 'keyword', foreground: 'ff79c6', fontStyle: 'bold' },
+        { token: 'number', foreground: 'bd93f9' },
+        { token: 'string', foreground: 'f1fa8c' },
+        { token: 'operators', foreground: '50fa7b' }
+      ],
+      colors: {
+        'editor.background': '#020617', // Match slate-950
+        'editor.foreground': '#f8f8f2',
+        'editorLineNumber.foreground': '#44475a',
+        'editor.selectionBackground': '#44475a',
+        'editor.lineHighlightBackground': '#1e293b', // Match slate-900ish
+        'editorCursor.foreground': '#2D4EF5', // Match brand
+      }
+    })
+  }
+
   // ── Next question ─────────────────────────────────────────────
   const handleNext = async () => {
     setPhase('loading_next')
@@ -438,17 +460,24 @@ export default function PlayPage() {
             <div className="flex-1 overflow-hidden relative">
               <Editor
                 height="100%"
-                defaultLanguage={monacoLang}
-                theme="vs-dark"
+                theme="iteratr-dark"
+                language={monacoLang}
                 value={userCode}
                 onChange={(val) => setUserCode(val || '')}
+                beforeMount={handleEditorWillMount}
                 options={{
                   fontSize: 14,
-                  fontFamily: 'JetBrains Mono, Menlo, monospace',
+                  fontFamily: 'JetBrains Mono, Menlo, Monaco, monospace',
                   minimap: { enabled: false },
                   scrollBeyondLastLine: false,
-                  automaticLayout: true,
+                  lineNumbers: 'on',
+                  glyphMargin: true,
+                  folding: true,
                   padding: { top: 20 },
+                  lineHeight: 1.6,
+                  cursorBlinking: 'smooth',
+                  cursorSmoothCaretAnimation: 'on',
+                  automaticLayout: true,
                   readOnly: phase === 'submitted'
                 }}
               />

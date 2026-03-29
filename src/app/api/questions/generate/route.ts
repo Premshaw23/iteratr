@@ -4,6 +4,8 @@ import { authOptions } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { generateMCQ, generateFill, generateOrder, generateCodeSpace } from '@/lib/gemini'
 import { getTargetQuestionElo } from '@/lib/elo'
+import { getAdaptiveMentorContext } from '@/lib/mentor'
+import { checkRateLimit } from '@/lib/ratelimit'
 
 export async function POST(req: NextRequest) {
   // Auth check
@@ -14,8 +16,6 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json()
   const { topic = 'arrays', customPrompt, language = 'python' } = body
-
-  // Get user's current Elo
   const { data: user } = await supabaseAdmin
     .from('users')
     .select('id, elo_rating')
@@ -24,6 +24,12 @@ export async function POST(req: NextRequest) {
 
   if (!user) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 })
+  }
+
+  // ── RATE LIMIT ──────────────────────────────────
+  const isAllowed = await checkRateLimit(user.id, 200, 1440) // 200 questions per 24h
+  if (!isAllowed) {
+    return NextResponse.json({ error: 'Daily question limit (200) reached. Try again in 24 hours.' }, { status: 429 })
   }
 
   // ── 1. Decide on a question type first ──────────────────────────
@@ -64,11 +70,13 @@ export async function POST(req: NextRequest) {
 
   // ── 3. Fallback: Generate fresh question from Gemini ──────────
   try {
+    const adaptiveContext = await getAdaptiveMentorContext(session.user.email)
+
     let generated: any
-    if (typeToGenerate === 'fill')      generated = await generateFill(topic, targetElo, customPrompt)
-    else if (typeToGenerate === 'order') generated = await generateOrder(topic, targetElo, customPrompt)
-    else if (typeToGenerate === 'code')  generated = await generateCodeSpace(topic, targetElo, language as any, customPrompt)
-    else                               generated = await generateMCQ(topic, targetElo, customPrompt)
+    if (typeToGenerate === 'fill')      generated = await generateFill(topic, targetElo, adaptiveContext, customPrompt)
+    else if (typeToGenerate === 'order') generated = await generateOrder(topic, targetElo, adaptiveContext, customPrompt)
+    else if (typeToGenerate === 'code')  generated = await generateCodeSpace(topic, targetElo, language as any, adaptiveContext, customPrompt)
+    else                               generated = await generateMCQ(topic, targetElo, adaptiveContext, customPrompt)
 
     // Save to DB so we reuse it for other users
     const { data: saved, error } = await supabaseAdmin

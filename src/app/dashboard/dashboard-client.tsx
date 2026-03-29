@@ -3,16 +3,25 @@
 import { signOut } from 'next-auth/react'
 import Link from 'next/link'
 import type { UserRow, TopicStatsRow, EloHistoryRow } from '@/types/database'
+import MasteryRadar from './mastery-radar'
+import ActivityGrid from './activity-grid'
+import EloChart from './elo-chart'
+import { Trophy, Flame, Target, MessageSquare, Plus, ArrowRight, User } from 'lucide-react'
 
 interface Props {
-  user:        UserRow
-  topicStats:  TopicStatsRow[]
-  eloHistory:  EloHistoryRow[]
+  user:           UserRow
+  topicStats:     TopicStatsRow[]
+  eloHistory:     EloHistoryRow[]
+  interviewCount: number
 }
 
-export default function DashboardClient({ user, topicStats, eloHistory }: Props) {
+export default function DashboardClient({ user, topicStats, eloHistory, interviewCount }: Props) {
   const weakZones = topicStats.filter(t => t.is_weak_zone)
   const eloPercent = Math.min(((user.elo_rating - 800) / (1800 - 800)) * 100, 100)
+  const totalSolved = topicStats.reduce((acc, ts) => acc + ts.solved_count, 0)
+  
+  // Get distinct topics for radar logic
+  const distinctTopics = Array.from(new Set(topicStats.map(s => s.topic)))
 
   return (
     <div className="min-h-screen bg-surface">
@@ -45,7 +54,8 @@ export default function DashboardClient({ user, topicStats, eloHistory }: Props)
           {/* Streak Indicator */}
           {user.streak_count > 0 && (
             <div className="flex items-center gap-2 bg-amber-50 text-amber-700 border border-amber-200/50 px-3 py-1.5 rounded-full shadow-sm">
-              <span className="text-sm font-bold">🔥 {user.streak_count}</span>
+              <Flame size={14} className="fill-amber-500 stroke-amber-600" />
+              <span className="text-sm font-bold">{user.streak_count}</span>
               <span className="text-[10px] font-bold uppercase tracking-wider opacity-60">Streak</span>
             </div>
           )}
@@ -78,14 +88,14 @@ export default function DashboardClient({ user, topicStats, eloHistory }: Props)
                   href={`/u/${user.display_name}`}
                   className="flex items-center gap-2.5 px-3 py-2 text-sm text-mid hover:text-brand hover:bg-brand-light rounded-xl transition"
                 >
-                  <span className="text-lg">👤</span> Profile Settings
+                  <User size={16} /> Profile Settings
                 </Link>
                 
                 <Link 
                   href="/stats"
                   className="flex items-center gap-2.5 px-3 py-2 text-sm text-mid hover:text-brand hover:bg-brand-light rounded-xl transition"
                 >
-                  <span className="text-lg">📊</span> Performance
+                  <Trophy size={16} /> Performance
                 </Link>
 
                 <div className="h-px bg-border my-1 mx-1" />
@@ -136,6 +146,9 @@ export default function DashboardClient({ user, topicStats, eloHistory }: Props)
           <Link href="/interview/new" className="px-2 py-2 rounded-lg text-sm text-mid hover:bg-surface hover:text-dark transition">
             Mock interview
           </Link>
+          <Link href="/leaderboard" className="px-2 py-2 rounded-lg text-sm text-mid hover:bg-surface hover:text-dark transition font-medium">
+            🏆 Leaderboard
+          </Link>
           {weakZones.length > 0 && (
             <Link href="/session/new?mode=weak_zones" className="px-2 py-2 rounded-lg text-sm text-red-600 hover:bg-red-50 transition">
               Fix weak zones ({weakZones.length})
@@ -149,23 +162,34 @@ export default function DashboardClient({ user, topicStats, eloHistory }: Props)
           {/* Stats row */}
           <div className="grid grid-cols-4 gap-3 mb-4">
             {[
-              { label: 'Elo rating',  value: user.elo_rating.toLocaleString(), sub: 'your rating',   color: 'text-brand'   },
-              { label: 'Streak',      value: `${user.streak_count}d`,          sub: 'days active',   color: 'text-amber-600' },
-              { label: 'Solved',      value: '—',                              sub: 'questions',     color: 'text-mid'     },
-              { label: 'Interviews',  value: '—',                              sub: 'mock sessions', color: 'text-mid'     },
+              { label: 'Elo rating',  value: user.elo_rating.toLocaleString(), sub: 'technical rating', icon: Trophy, color: 'text-brand'   },
+              { label: 'Streak',      value: `${user.streak_count}d`,          sub: 'days active',     icon: Flame,  color: 'text-amber-600' },
+              { label: 'Solved',      value: totalSolved,                      sub: 'questions',       icon: Target, color: 'text-emerald-600' },
+              { label: 'Interviews',  value: interviewCount,                   sub: 'mock sessions',   icon: MessageSquare, color: 'text-purple-600' },
             ].map(s => (
-              <div key={s.label} className="bg-white border border-border rounded-xl p-4">
-                <p className="text-xs text-muted mb-1">{s.label}</p>
-                <p className="text-3xl font-bold text-dark">{s.value}</p>
-                <p className={`text-xs mt-1 font-medium ${s.color}`}>{s.sub}</p>
+              <div key={s.label} className="bg-white border border-border rounded-xl p-4 flex flex-col justify-between">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-[10px] font-bold text-muted uppercase tracking-wider">{s.label}</p>
+                  <s.icon className={`w-3.5 h-3.5 ${s.color}`} />
+                </div>
+                <div>
+                  <p className="text-3xl font-black text-dark tracking-tight">{s.value}</p>
+                  <p className={`text-[11px] mt-1 font-semibold ${s.color}`}>{s.sub}</p>
+                </div>
               </div>
             ))}
           </div>
 
+          {/* Activity Heatmap Grid */}
+          <div className="bg-white border border-border rounded-xl p-4 mb-4 relative overflow-hidden group">
+            <div className="absolute -top-10 -right-10 w-32 h-32 bg-brand/5 blur-3xl rounded-full" />
+            <ActivityGrid streakCount={user.streak_count} />
+          </div>
+
           {/* Daily challenge banner */}
           <div className="bg-white border border-border rounded-xl p-4 mb-4 flex items-center gap-4">
-            <div className="w-11 h-11 rounded-xl bg-brand-light flex items-center justify-center text-brand text-xl font-bold flex-shrink-0">
-              ★
+            <div className="w-11 h-11 rounded-xl bg-brand-light flex items-center justify-center text-brand flex-shrink-0">
+              <Plus className="w-5 h-5" />
             </div>
             <div className="flex-1">
               <p className="text-xs text-muted mb-0.5">Today&apos;s challenge</p>
@@ -185,42 +209,69 @@ export default function DashboardClient({ user, topicStats, eloHistory }: Props)
             </Link>
           </div>
 
-          {/* Two-col: Elo progress + Recent changes */}
+          {/* Two-col: Elo Trend + Recent Activity */}
           <div className="grid grid-cols-2 gap-4 mb-4">
-
-            {/* Elo progress */}
-            <div className="bg-white border border-border rounded-xl p-4">
-              <p className="text-sm font-semibold text-dark mb-3">Elo progress</p>
-              <div className="flex items-baseline gap-2 mb-3">
-                <span className="text-3xl font-bold text-dark">{user.elo_rating.toLocaleString()}</span>
-                <span className="text-xs text-green-600 font-medium">current rating</span>
+            
+            {/* Elo Trend Chart */}
+            <div className="bg-white border border-border rounded-xl p-4 flex flex-col">
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-sm font-bold text-dark tracking-tight">Technical Growth</p>
+                <div className="flex items-center gap-1.5 px-2 py-0.5 bg-blue-50 text-brand rounded-full border border-blue-100 uppercase tracking-widest text-[8px] font-black">
+                   Elo Trend
+                </div>
               </div>
-              <div className="h-1.5 bg-surface rounded-full overflow-hidden mb-2">
-                <div className="h-full bg-brand rounded-full transition-all" style={{ width: `${eloPercent}%` }} />
-              </div>
-              <div className="flex justify-between text-xs text-muted">
-                <span>800 foundation</span>
-                <span>{user.elo_rating} now</span>
-                <span>1800 expert</span>
+              <div className="flex-1 min-h-[160px]">
+                 <EloChart history={eloHistory} />
               </div>
             </div>
 
-            {/* Recent Elo changes */}
-            <div className="bg-white border border-border rounded-xl p-4">
-              <p className="text-sm font-semibold text-dark mb-3">Recent Elo changes</p>
+            {/* Recent History Table */}
+            <div className="bg-white border border-border rounded-xl p-4 overflow-hidden flex flex-col">
+              <p className="text-sm font-bold text-dark mb-4">Recent Activity</p>
               {eloHistory.length === 0 ? (
-                <p className="text-sm text-muted">No attempts yet. Start a session!</p>
+                <div className="flex-1 flex items-center justify-center p-8 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+                  <p className="text-xs text-muted font-medium italic">No attempts yet. Start a session!</p>
+                </div>
               ) : (
-                <div className="space-y-2">
-                  {eloHistory.map(h => (
-                    <div key={h.id} className="flex items-center justify-between text-sm">
-                      <span className="text-mid truncate">{h.reason}</span>
-                      <span className={`font-semibold ml-2 flex-shrink-0 ${h.elo_change >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                        {h.elo_change >= 0 ? '+' : ''}{h.elo_change}
+                <div className="space-y-1 overflow-y-auto max-h-[180px] scrollbar-thin">
+                  {eloHistory.slice(0, 10).map(h => (
+                    <div key={h.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 transition group">
+                      <div className="flex flex-col truncate">
+                        <span className="text-[11px] font-bold text-dark truncate leading-tight group-hover:text-brand transition">{h.reason}</span>
+                        <span className="text-[9px] text-muted font-bold uppercase tracking-tighter mt-0.5" suppressHydrationWarning>
+                          {new Date(h.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                      <span className={`text-[11px] font-black ml-2 tabular-nums flex-shrink-0 px-2 py-1 rounded-md ${
+                        h.elo_change >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'
+                      }`}>
+                        {h.elo_change >= 0 ? '▲' : '▼'} {Math.abs(h.elo_change)}
                       </span>
                     </div>
                   ))}
                 </div>
+              )}
+              {eloHistory.length > 10 && (
+                <Link href="/stats" className="mt-2 text-center text-[10px] font-bold text-muted hover:text-brand transition uppercase tracking-widest block">
+                  See all activity →
+                </Link>
+              )}
+            </div>
+          </div>
+
+          {/* Topic Mastery Radar */}
+          <div className="bg-white border border-border rounded-xl p-4 flex flex-col mb-4">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm font-bold text-dark">Topic Mastery</p>
+              <span className="text-[10px] font-bold text-muted uppercase tracking-widest">Aggregate View</span>
+            </div>
+            <div className="flex-1 min-h-[240px]">
+              {topicStats.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-center p-4">
+                  <p className="text-xs text-muted italic">Complete your first session to unlock your Technical Mastery Radar.</p>
+                </div>
+              ) : (
+                <MasteryRadar stats={topicStats} />
               )}
             </div>
           </div>

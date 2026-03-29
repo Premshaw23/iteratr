@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { calculateEloChange } from '@/lib/elo'
-import { generateMCQFeedback, evaluateCode, evaluateFillAnswers } from '@/lib/gemini'
+import { generateMCQFeedback, evaluateCode, evaluateFillAnswers, generateUserReflection } from '@/lib/gemini'
 import type { MCQPayload, CodePayload } from '@/types/database'
 
 export async function POST(req: NextRequest) {
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
   // Fetch user
   const { data: user } = await supabaseAdmin
     .from('users')
-    .select('id, elo_rating')
+    .select('id, elo_rating, streak_count, updated_at')
     .eq('email', session.user.email)
     .single()
 
@@ -148,10 +148,29 @@ export async function POST(req: NextRequest) {
       .select()
       .single()
 
-    // ── Update user Elo ───────────────────────────────────────────
+    // ── Update user Elo & Streak ──────────────────────────────────
+    const lastDate = new Date(user.updated_at).toDateString()
+    const todayDate = new Date().toDateString()
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1)
+    const yesterdayDate = yesterday.toDateString()
+
+    let newStreak = user.streak_count || 0
+    if (lastDate === yesterdayDate) {
+      newStreak += 1
+    } else if (lastDate !== todayDate) {
+      newStreak = 1
+    } else if (newStreak === 0) {
+      newStreak = 1
+    }
+
     await supabaseAdmin
       .from('users')
-      .update({ elo_rating: eloResult.newElo, updated_at: new Date().toISOString() })
+      .update({ 
+        elo_rating:   eloResult.newElo, 
+        streak_count: newStreak,
+        updated_at:   new Date().toISOString() 
+      })
       .eq('id', user.id)
 
     // ── Save Elo history ──────────────────────────────────────────
@@ -189,15 +208,33 @@ export async function POST(req: NextRequest) {
         })
         .eq('id', existingStat.id)
     } else {
-      await supabaseAdmin.from('topic_stats').insert({
-        user_id:              user.id,
-        topic:                question.topic,
-        subtopic:             question.subtopic,
-        solved_count:         isCorrect ? 1 : 0,
-        fail_count:           isCorrect ? 0 : 1,
-        is_weak_zone:         false,
-        consecutive_correct:  isCorrect ? 1 : 0,
-      })
+    }
+
+    // ── Update Reflection (Long-term memory) every 5 attempts ──────────
+    const { count: attemptCount } = await supabaseAdmin
+      .from('attempts')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+
+    if (attemptCount && attemptCount % 5 === 0) {
+      const { data: recentAttempts } = await supabaseAdmin
+        .from('attempts')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(10)
+      
+      const { data: stats } = await supabaseAdmin
+        .from('topic_stats')
+        .select('*')
+        .eq('user_id', user.id)
+
+      const reflection = await generateUserReflection(session.user?.name || 'User', stats || [], recentAttempts || [])
+      
+      await supabaseAdmin
+        .from('users')
+        .update({ reflection_text: reflection })
+        .eq('id', user.id)
     }
 
     return NextResponse.json({

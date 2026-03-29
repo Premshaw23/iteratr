@@ -2,14 +2,20 @@
 // iteratr — Gemini API Client
 // Handles question generation and hint generation
 // ─────────────────────────────────────────────────────────────
+import { MCQSchema, FillSchema, OrderSchema, CodeSchema, InterviewScorecardSchema } from './schemas'
 
 const GEMINI_API_URL =
   'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent'
 
 // ── Raw Gemini call ───────────────────────────────────────────
-async function callGemini(prompt: string, systemPrompt?: string): Promise<string> {
-  const apiKey = process.env.GEMINI_API_KEY
-  if (!apiKey) throw new Error('GEMINI_API_KEY is not set')
+let currentKeyIndex = 0
+
+async function callGemini(prompt: string, systemPrompt?: string, retryCount = 0): Promise<string> {
+  const allKeys = (process.env.GEMINI_API_KEY || '').split(',').map(k => k.trim()).filter(Boolean)
+  if (allKeys.length === 0) throw new Error('GEMINI_API_KEY is not set')
+
+  // Rotate key based on current index
+  const apiKey = allKeys[currentKeyIndex % allKeys.length]
 
   const body = {
     contents: [
@@ -30,22 +36,38 @@ async function callGemini(prompt: string, systemPrompt?: string): Promise<string
     },
   }
 
-  const res = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify(body),
-  })
+  try {
+    const res = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(body),
+    })
 
-  if (!res.ok) {
-    const err = await res.text()
-    throw new Error(`Gemini API error: ${err}`)
+    if (!res.ok) {
+      const errText = await res.text()
+      // If we are rate limited (429) and have more keys, rotate and retry
+      if ((res.status === 429 || res.status === 401) && retryCount < allKeys.length) {
+        console.warn(`Gemini Key ${currentKeyIndex} failed (${res.status}). Rotating...`)
+        currentKeyIndex++
+        return callGemini(prompt, systemPrompt, retryCount + 1)
+      }
+      throw new Error(`Gemini API error (${res.status}): ${errText}`)
+    }
+
+    const data = await res.json()
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text
+
+    if (!text) throw new Error('Gemini returned empty response')
+    return text
+    
+  } catch (error: any) {
+    if (retryCount < allKeys.length - 1) {
+       console.warn(`Gemini Request failed. Rotating... error: ${error.message}`)
+       currentKeyIndex++
+       return callGemini(prompt, systemPrompt, retryCount + 1)
+    }
+    throw error
   }
-
-  const data = await res.json()
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text
-
-  if (!text) throw new Error('Gemini returned empty response')
-  return text
 }
 
 // ── Strip markdown code fences from JSON response ─────────────
@@ -129,9 +151,11 @@ export interface GeneratedCode {
 export async function generateMCQ(
   topic: string,
   targetElo: number,
+  adaptiveContext: string = '',
   customPrompt?: string
 ): Promise<GeneratedMCQ> {
   const systemPrompt = `You are an expert computer science educator creating questions for an adaptive coding platform called iteratr.
+${adaptiveContext ? `MENTOR CONTEXT:\n${adaptiveContext}` : ''}
 Your goal is to generate challenging but fair questions that test REAL understanding, not trivia.
 For wrong answer options (distractors), always base them on ACTUAL misconceptions students have.
 Never give away the answer in the question itself.
@@ -179,7 +203,7 @@ Rules:
 
   const raw = await callGemini(prompt, systemPrompt)
   const json = extractJSON(raw)
-  return JSON.parse(json) as GeneratedMCQ
+  return MCQSchema.parse(JSON.parse(json)) as GeneratedMCQ
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -272,9 +296,11 @@ Do NOT reveal the correct answer explicitly — just explain the flaw in the stu
 export async function generateFill(
   topic: string,
   targetElo: number,
+  adaptiveContext: string = '',
   customPrompt?: string
 ): Promise<GeneratedFill> {
   const systemPrompt = `You are an expert computer science educator creating "Fill in the Blank" questions for iteratr.
+${adaptiveContext ? `MENTOR CONTEXT:\n${adaptiveContext}` : ''}
 Your goal is to choose blanks that reveal a conceptual gap, not syntax trivia.
 Example: "A recursive function must have a ___ case to stop..." -> blank: "base".
 Do NOT use LaTeX math mode ($N$). Use standard backticks (\`N\`).
@@ -317,7 +343,7 @@ Rules:
 
   const raw = await callGemini(prompt, systemPrompt)
   const json = extractJSON(raw)
-  return JSON.parse(json) as GeneratedFill
+  return FillSchema.parse(JSON.parse(json)) as GeneratedFill
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -327,9 +353,11 @@ Rules:
 export async function generateOrder(
   topic: string,
   targetElo: number,
+  adaptiveContext: string = '',
   customPrompt?: string
 ): Promise<GeneratedOrder> {
   const systemPrompt = `You are an expert educator creating "Drag to Order" procedural questions for iteratr.
+${adaptiveContext ? `MENTOR CONTEXT:\n${adaptiveContext}` : ''}
 Your goal is to test sequential understanding (e.g. algorithms, system flows, OS boot sequences).
 STRICT RULE: Do NOT use LaTeX math mode ($N$). Use backticks (\`N\`).
 ${customPrompt ? `Additional instructions: ${customPrompt}` : ''}
@@ -366,7 +394,7 @@ Rules:
 
   const raw = await callGemini(prompt, systemPrompt)
   const json = extractJSON(raw)
-  return JSON.parse(json) as GeneratedOrder
+  return OrderSchema.parse(JSON.parse(json)) as GeneratedOrder
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -377,9 +405,11 @@ export async function generateCodeSpace(
   topic: string,
   targetElo: number,
   language: 'python' | 'cpp' | 'javascript' = 'python',
+  adaptiveContext: string = '',
   customPrompt?: string
 ): Promise<GeneratedCode> {
   const systemPrompt = `You are a senior Software Engineer creating coding challenges for iteratr.
+${adaptiveContext ? `MENTOR CONTEXT:\n${adaptiveContext}` : ''}
 Your goal is to test logic and algorithm implementation.
 Avoid boilerplate — provide a clean scaffold (method signature + docstring).
 Generate 3-5 hidden test cases including edge cases (empty input, large values, etc.).
@@ -422,12 +452,45 @@ Rules:
 
   const raw = await callGemini(prompt, systemPrompt)
   const json = extractJSON(raw)
-  return JSON.parse(json) as GeneratedCode
+  return CodeSchema.parse(JSON.parse(json)) as GeneratedCode
 }
 
 // ─────────────────────────────────────────────────────────────
 // CODE EVALUATION
 // ─────────────────────────────────────────────────────────────
+
+const LANG_MAP: Record<string, number> = {
+  python:     71,
+  cpp:        54,
+  javascript: 63
+}
+
+async function runOnJudge0(source_code: string, language: string, stdin?: string) {
+  const apiKey = process.env.JUDGE0_API_KEY
+  const apiUrl = process.env.JUDGE0_API_URL || 'https://ce.judge0.com'
+  if (!apiKey) return null
+
+  try {
+    const res = await fetch(`${apiUrl}/submissions?base64_encoded=false&wait=true`, {
+      method:  'POST',
+      headers: {
+        'Content-Type':   'application/json',
+        'X-Auth-Token':   apiKey, // Official Judge0 CE uses X-Auth-Token
+      },
+      body: JSON.stringify({
+        source_code,
+        language_id: LANG_MAP[language] || 71,
+        stdin
+      })
+    })
+
+    if (!res.ok) return null
+    return await res.json()
+  } catch (err) {
+    console.error('Judge0 Error:', err)
+    return null
+  }
+}
 
 export async function evaluateCode(
   problem: string,
@@ -435,26 +498,47 @@ export async function evaluateCode(
   language: string,
   hiddenTests: { input: string, expected_output: string, description: string }[]
 ): Promise<{ isCorrect: boolean, feedback: string }> {
+  
+  let executionResults: any[] = []
+  let allPassed = true
+
+  // 1. Try real execution on Judge0
+  if (process.env.JUDGE0_API_KEY) {
+    for (const test of hiddenTests) {
+      const result = await runOnJudge0(userCode, language, test.input)
+      if (result) {
+        const stdout   = (result.stdout || '').trim()
+        const expected = (test.expected_output || '').trim()
+        const passed   = stdout === expected
+        executionResults.push({ input: test.input, stdout, status: result.status?.description, passed })
+        if (!passed) allPassed = false
+      }
+    }
+  }
+
+  // 2. Use Gemini for final feedback and logic verification
   const systemPrompt = `You are a code execution engine and mentor. 
-Your job is to evaluate if the student's code correctly solves the problem.
-Analyze the code logic against the provided test cases.
-Respond ONLY with JSON: { "isCorrect": boolean, "feedback": "2-3 sentences explaining success or failure" }`
+  Assess the student's code. 
+  If real execution results (JUDGE0_RESULTS) are provided, use them to check correctness.
+  Respond ONLY with JSON: { "isCorrect": boolean, "feedback": "2-3 sentences explaining success or failure" }`
 
   const prompt = `Problem: ${problem}
-Language: ${language}
-User Code:
-\`\`\`
-${userCode}
-\`\`\`
-
-Test Cases to consider:
-${hiddenTests.map(t => `- Input: ${t.input}, Expected: ${t.expected_output} (${t.description})`).join('\n')}
-
-Based on your analysis of the code logic (and edge cases), did the student solve it correctly?`
+  Language: ${language}
+  User Code: ${userCode}
+  JUDGE0_RESULTS: ${JSON.stringify(executionResults)}
+  
+  Analyze the logic and the outputs. If all test cases passed on Judge0, it's correct.`
 
   const raw = await callGemini(prompt, systemPrompt)
-  const json = extractJSON(raw)
-  return JSON.parse(json)
+  try {
+    const json = JSON.parse(extractJSON(raw))
+    return {
+      isCorrect: executionResults.length > 0 ? allPassed : (json.isCorrect ?? false),
+      feedback:  json.feedback ?? "Evaluation complete."
+    }
+  } catch {
+    return { isCorrect: false, feedback: "Evaluation format error." }
+  }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -483,4 +567,145 @@ Evaluate each input in the array. Is it semantically correct for its specific bl
     isCorrect:      result.isCorrect as boolean[],
     generalFeedback: result.generalFeedback
   }
+}
+// ─────────────────────────────────────────────────────────────
+// MOCK INTERVIEW AGENT
+// ─────────────────────────────────────────────────────────────
+
+export interface InterviewMessage {
+  role: 'interviewer' | 'candidate'
+  content: string
+}
+
+export async function generateInterviewResponse(
+  problem: string,
+  history: InterviewMessage[],
+  userCode: string,
+  style: string = 'neutral'
+): Promise<string> {
+  const styles: Record<string, string> = {
+    friendly: "You are a warm, encouraging mentor. You nudge them with kindness and analogies.",
+    neutral:  "You are a professional, efficient interviewer. You are fair but direct.",
+    strict:   "You are an intimidating, high-pressure FAANG interviewer. You ask critical follow-up questions about space/time complexity even for minor parts."
+  }
+
+  const systemPrompt = `You are a Senior Technical Interviewer at a top-tier tech company. 
+  ${styles[style] || styles.neutral}
+  
+  CURRENT PROBLEM: ${problem}
+  
+  RULES:
+  1. Never write the full solution for the candidate.
+  2. If they are stuck, give a directional nudge.
+  3. If they finished, ask about time/space complexity or possible edge cases.
+  4. Respond like a human in a conversation. Keep responses to 1-3 paragraphs.
+  5. You can see their current code in the IDE (pasted below). 
+  6. Use technical terminology correctly.
+  7. **CRITICAL: DYNAMIC TASK UPDATES**
+     If you ever pivot the interview to a new scenario, a new part of a problem, or a completely different challenge (e.g., shifting from 'BFS Traversal' to 'Shortest Path'), you **MUST** include a \[TASK_UPDATE: new problem description\] block at the very start of your response. 
+     
+     EXAMPLE:
+     User solved BFS? You want to ask about Shortest Path? 
+     Response: "[TASK_UPDATE: Modify your code to find the shortest path from 'src' to 'target' in an unweighted graph.] Great job on the traversal. Now, how would we modification this to find the shortest path?"
+     
+     This is the ONLY way the user's right panel will update. Use it whenever the core objective evolves.`
+
+  const conversationText = history.map(m => `${m.role.toUpperCase()}: ${m.content}`).join('\n')
+
+  const prompt = `
+  Current Code in Candidate's IDE:
+  \`\`\`
+  ${userCode || '# No code written yet'}
+  \`\`\`
+
+  Conversation History:
+  ${conversationText}
+
+  Candidate just said/sent:
+  ${history[history.length - 1]?.content || "[Interview Started]"}
+
+  Generate your response as the INTERVIEWER.`
+
+  return await callGemini(prompt, systemPrompt)
+}
+
+// ─────────────────────────────────────────────────────────────
+// INTERVIEW EVALUATION
+// ─────────────────────────────────────────────────────────────
+
+export interface InterviewScorecard {
+  overall_score: number // 0-100
+  communication: { score: number, feedback: string }
+  logic:         { score: number, feedback: string }
+  optimization:  { score: number, feedback: string }
+  summary:       string
+  hire_decision: "Strong Hire" | "Hire" | "Leaning No Hire" | "No Hire"
+}
+
+export async function evaluateInterview(
+  problem: string,
+  history: InterviewMessage[],
+  userCode: string
+): Promise<InterviewScorecard> {
+  const systemPrompt = `You are a Lead Engineer conducting a review of a candidate's mock interview.
+  Analyze the conversation history and the final code. 
+  
+  CRITERIA:
+  1. Communication: Did they explain their thinking? Did they ask clarifying questions?
+  2. Logic: Is the code correct? Did it handle edge cases?
+  3. Optimization: Did they discuss time/space complexity? 
+  
+  Respond ONLY with valid JSON.`
+
+  const conversationText = history.map(m => `${m.role.toUpperCase()}: ${m.content}`).join('\n')
+
+  const prompt = `
+  PROBLEM: ${problem}
+  
+  FINAL CODE:
+  \`\`\`
+  ${userCode}
+  \`\`\`
+  
+  INTERVIEW TRANSCRIPT:
+  ${conversationText}
+  
+  Evaluate the performance across the criteria. 
+  
+  JSON Format:
+  {
+    "overall_score": 85,
+    "communication": { "score": 9, "feedback": "..." },
+    "logic": { "score": 8, "feedback": "..." },
+    "optimization": { "score": 7, "feedback": "..." },
+    "summary": "Full summary of performance",
+    "hire_decision": "Strong Hire"
+  }`
+
+  const raw = await callGemini(prompt, systemPrompt)
+  const json = extractJSON(raw)
+  return InterviewScorecardSchema.parse(JSON.parse(json)) as InterviewScorecard
+}
+
+// ─────────────────────────────────────────────────────────────
+// USER REFLECTION (Long-term Memory)
+// ─────────────────────────────────────────────────────────────
+
+export async function generateUserReflection(
+  userName: string,
+  stats: any[],
+  recentAttempts: any[]
+): Promise<string> {
+  const systemPrompt = `You are a career coach analyzing a student's progress. 
+  Summarize their current state in EXACTLY 2 sentences. 
+  Focus on their strengths and one specific area where they need to bridge a gap.
+  Use a second-person perspective ("You...").`
+
+  const prompt = `User: ${userName}
+  Topic Stats: ${JSON.stringify(stats)}
+  Recent Attempts: ${JSON.stringify(recentAttempts)}
+  
+  Generate the 2-sentence reflection.`
+
+  return await callGemini(prompt, systemPrompt)
 }

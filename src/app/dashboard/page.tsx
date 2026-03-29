@@ -27,19 +27,27 @@ export default async function DashboardPage() {
     .eq('user_id', user.id)
     .order('fail_count', { ascending: false })
 
-  // Fetch last 5 Elo changes
+  // Fetch last 20 Elo changes
   const { data: eloHistory } = await supabaseAdmin
     .from('elo_history')
     .select('*')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
-    .limit(5)
+    .limit(20)
+
+  // Fetch interview session count
+  const { count: interviewCount } = await supabaseAdmin
+    .from('sessions')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+    .eq('session_type', 'interview')
 
   return (
     <DashboardClient
       user={user}
       topicStats={topicStats ?? []}
       eloHistory={eloHistory ?? []}
+      interviewCount={interviewCount || 0}
     />
   )
 }

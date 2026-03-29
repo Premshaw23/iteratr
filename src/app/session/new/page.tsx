@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useState, Suspense } from 'react'
+import { useState, Suspense, useEffect } from 'react'
 
 const TOPICS = [
   { id: 'arrays',             label: 'Arrays'           },
@@ -50,6 +50,7 @@ function SessionNewContent() {
   const { data: session, status } = useSession()
   const router   = useRouter()
   const params   = useSearchParams()
+  const modeParam = params.get('mode') ?? 'balanced'
 
   const defaultTopic = params.get('topic') ?? 'arrays'
 
@@ -57,9 +58,22 @@ function SessionNewContent() {
   const [difficulty,      setDifficulty]  = useState('auto')
   const [style,           setStyle]       = useState('neutral')
   const [timer,           setTimer]       = useState('none')
+  const [mode,            setMode]        = useState(modeParam)
   const [language,        setLanguage]    = useState('python')
   const [customPrompt,    setCustomPrompt]= useState('')
   const [starting,        setStarting]    = useState(false)
+  const [weakZonesCount,  setWeakZonesCount] = useState(0)
+
+  // Fetch weak zones to show in the mode button
+  useEffect(() => {
+    if (!session) return
+    fetch('/api/user/stats') // I need to create this simple list API
+      .then(res => res.json())
+      .then(data => {
+        const wz = data.filter((s: any) => s.is_weak_zone).length
+        setWeakZonesCount(wz)
+      })
+  }, [session])
 
   if (status === 'loading') return null
   if (!session) { router.push('/login'); return null }
@@ -93,11 +107,12 @@ function SessionNewContent() {
         difficulty,
         style,
         timer,
+        mode,
         language,
         customPrompt,
         current_question: data.question,
         question_number:  1,
-        total_questions:  5,
+        total_questions:  mode === 'weak_zones' ? 3 : 5,
         hints_used:       0,
       }))
       router.push('/session/play')
@@ -236,6 +251,36 @@ function SessionNewContent() {
               rows={2}
               className="w-full border border-border rounded-xl px-3 py-2.5 text-sm text-dark bg-white resize-none focus:outline-none focus:border-brand placeholder:text-muted"
             />
+          </div>
+
+          {/* Session mode toggle */}
+          <div>
+            <label className="text-xs font-semibold text-muted uppercase tracking-wider mb-3 block">
+              Session Mode
+            </label>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setMode('balanced')}
+                className={`flex-1 text-sm py-2 px-3 rounded-xl border transition font-medium ${
+                  mode === 'balanced'
+                    ? 'border-brand bg-brand-light text-brand'
+                    : 'border-border text-mid hover:border-brand'
+                }`}
+              >
+                Balanced
+              </button>
+              <button
+                onClick={() => setMode('weak_zones')}
+                disabled={weakZonesCount === 0}
+                className={`flex-1 text-sm py-2 px-3 rounded-xl border transition font-medium ${
+                  mode === 'weak_zones'
+                    ? 'border-red-400 bg-red-50 text-red-700'
+                    : 'border-border text-mid hover:border-red-400'
+                } disabled:opacity-40`}
+              >
+                Weak Zone Recovery 💉 {weakZonesCount > 0 ? `(${weakZonesCount})` : ''}
+              </button>
+            </div>
           </div>
 
           {/* Session preview */}
