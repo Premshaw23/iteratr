@@ -96,12 +96,38 @@ export async function POST(req: NextRequest) {
     } else if (question.type === 'code') {
       const payload = question.payload as CodePayload
       
+      // 1. Run Judge0 first
+      const testsToRun = payload.hidden_tests && payload.hidden_tests.length > 0
+        ? payload.hidden_tests
+        : [{ input: '', expected_output: '', description: 'Standard Execution (No hidden tests defined)' }]
+
+      let codeToRun = submitted_answer
+      let isDriverGenerated = false
+      const hasCppMain = payload.language === 'cpp' && submitted_answer.includes('int main')
+      const hasPyMain = payload.language === 'python' && (submitted_answer.includes('if __name__') || submitted_answer.includes('print('))
+      const hasJsMain = payload.language === 'javascript' && submitted_answer.includes('console.log')
+
+      if (!hasCppMain && !hasPyMain && !hasJsMain && testsToRun.length > 0 && testsToRun[0].input) {
+        const { generateIoDriver } = await import('@/lib/gemini')
+        const ioDriver = await generateIoDriver(submitted_answer, payload.language, testsToRun[0])
+        codeToRun = `${submitted_answer}\n\n${ioDriver}`
+        isDriverGenerated = true
+      }
+
+      const { runAgainstHiddenTests } = await import('@/lib/judge0')
+      const executionResults = await runAgainstHiddenTests(
+        codeToRun,
+        payload.language,
+        testsToRun
+      )
+
       // AI-based verification for now (fallback for Judge0)
       const result = await evaluateCode(
         question.problem_statement,
         submitted_answer, // user_code is stored in submitted_answer for code type
         payload.language,
-        payload.hidden_tests
+        executionResults,
+        isDriverGenerated
       )
       
       isCorrect = result.isCorrect

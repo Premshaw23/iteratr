@@ -130,8 +130,12 @@ export default function PlayPage() {
         const summary = `Passed ${data.passed_count}/${data.total_count} hidden tests.`
         const firstFailed = (data.results || []).find((r: any) => !r.passed)
         if (firstFailed) {
+          const statusText = firstFailed.status !== 'Accepted' ? ` (Error: ${firstFailed.status})` : ''
+          const errorMsg = firstFailed.compile_output || firstFailed.stderr || ''
+          const displayOutput = firstFailed.actual_output || (errorMsg ? 'Check your code for compilation or runtime errors.' : 'No output produced.')
+          
           setFeedback(
-            `${summary} First failing case: ${firstFailed.description}. Expected "${firstFailed.expected_output}", got "${firstFailed.actual_output}".`
+            `${summary}${statusText} First failing case: ${firstFailed.description}. Expected "${firstFailed.expected_output}", got "${displayOutput}"${errorMsg ? `\n\nDEBUG INFO:\n${errorMsg.slice(0, 500)}` : ''}`
           )
         } else {
           setFeedback(`${summary} All hidden tests passed. Proceed to final verification.`)
@@ -885,7 +889,11 @@ export default function PlayPage() {
                 </button>
                 <button
                   onClick={handleSubmit}
-                  disabled={!(isMCQ ? selected !== null : isFill ? fillAnswers.length > 0 : true) || submitting}
+                  disabled={
+                    (isMCQ ? selected === null : 
+                     isFill ? !(fillAnswers.length > 0 && fillAnswers.every(a => a?.trim() !== '')) : 
+                     false) || submitting
+                  }
                   className="flex-1 bg-brand text-white font-bold px-10 py-4 rounded-[20px] hover:bg-brand-dark transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-brand/30 hover:shadow-brand/40 active:scale-[0.98] flex items-center justify-center gap-3 text-base"
                 >
                   {submitting ? (

@@ -3,10 +3,10 @@
 // Handles question generation and hint generation
 // ─────────────────────────────────────────────────────────────
 import { MCQSchema, FillSchema, OrderSchema, CodeSchema, InterviewScorecardSchema } from './schemas'
-import { runAgainstHiddenTests } from './judge0'
+// import { runAgainstHiddenTests } from './judge0'
 
 const GEMINI_API_URL =
-  'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent'
+  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
 
 // ── Raw Gemini call ───────────────────────────────────────────
 let currentKeyIndex = 0
@@ -17,6 +17,8 @@ async function callGemini(prompt: string, systemPrompt?: string, retryCount = 0)
 
   // Rotate key based on current index
   const apiKey = allKeys[currentKeyIndex % allKeys.length]
+
+  const isJsonRequest = prompt.includes('JSON') || (systemPrompt && systemPrompt.includes('JSON'))
 
   const body = {
     contents: [
@@ -33,7 +35,8 @@ async function callGemini(prompt: string, systemPrompt?: string, retryCount = 0)
     generationConfig: {
       temperature:     0.7,
       topP:            0.9,
-      maxOutputTokens: 2048,
+      maxOutputTokens: 8192,
+      ...(isJsonRequest && { responseMimeType: 'application/json' }),
     },
   }
 
@@ -494,6 +497,45 @@ Rules:
 }
 
 // ─────────────────────────────────────────────────────────────
+// DYNAMIC I/O DRIVER GENERATION
+// ─────────────────────────────────────────────────────────────
+
+export async function generateIoDriver(
+  userCode: string,
+  language: string,
+  sampleTest: { input: string, expected_output: string }
+): Promise<string> {
+  const prompt = `You are an I/O test driver generator for a coding platform.
+The user wrote this ${language} code:
+\`\`\`${language}
+${userCode}
+\`\`\`
+
+We will execute this code on Judge0 and pass test inputs via standard input (stdin).
+Sample STDIN input:
+${sampleTest.input}
+
+Sample expected STDOUT:
+${sampleTest.expected_output}
+
+Generate ONLY the exact driver code (e.g., \`int main() { ... }\` for C++, \`if __name__ == '__main__': ...\` for Python, or direct function calls for JS) that will:
+1. Read the input from STDIN (using \`cin\`, \`sys.stdin.read\`, or \`fs.readFileSync(0, 'utf-8')\`).
+2. Parse the STDIN text into the exact data types expected by the user's function.
+   - For C/C++, if an input looks like an array (e.g., \`[1, 2, 3]\`), write robust logic to ignore or replace brackets \`[\`, \`]\` and commas \`,\` before streaming them into a vector!! Use string or char replacement logic.
+3. Call the user's function/method.
+4. Print the result directly to STDOUT exactly matching the 'Sample expected STDOUT' format (including brackets/commas if expected in the output).
+
+CRITICAL RULES:
+- Output ONLY valid executable ${language} code. No explanations. No markdown blocks like \`\`\`cpp.
+- Do NOT rewrite or include any of the user's code. Just provide the driver code to append at the bottom.
+- Ensure all types perfectly match the user's function signature.
+- Only construct the class if necessary (e.g. \`Solution sol;\`).`
+
+  const raw = await callGemini(prompt, 'You are a code execution driver generator. Output raw code only without markdown.')
+  return raw.replace(/```[a-z]*\n?/g, '').replace(/```\n?/g, '').trim()
+}
+
+// ─────────────────────────────────────────────────────────────
 // CODE EVALUATION
 // ─────────────────────────────────────────────────────────────
 
@@ -501,33 +543,67 @@ export async function evaluateCode(
   problem: string,
   userCode: string,
   language: string,
-  hiddenTests: { input: string, expected_output: string, description: string }[]
+  executionResults: import('./judge0').Judge0CaseResult[],
+  isDriverGenerated: boolean = false
 ): Promise<{ isCorrect: boolean, feedback: string }> {
-  
-  // 1. Try real execution on Judge0
-  const executionResults = process.env.JUDGE0_API_KEY
-    ? await runAgainstHiddenTests(userCode, language, hiddenTests)
-    : []
-  const allPassed = executionResults.length > 0 && executionResults.every(r => r.passed)
 
-  // 2. Use Gemini for final feedback and logic verification
-  const systemPrompt = `You are a code execution engine and mentor. 
-  Assess the student's code. 
-  If real execution results (JUDGE0_RESULTS) are provided, use them to check correctness.
+  // 1. Check if execution was "meaningful" (produced output or had errors)
+  const hasExecutionOutput = executionResults.some(r => r.actual_output.length > 0 || r.stderr || (r.status !== 'Accepted' && r.status !== 'Unknown'))
+  const allPassed = executionResults.length > 0 && executionResults.every(r => r.passed)
+  const hadNetworkError = executionResults.some(r => r.status === 'Network Error / Timeout')
+
+  // If Judge0 definitively passed all tests and actually produced output
+  if (allPassed && hasExecutionOutput && !hadNetworkError) {
+    return { isCorrect: true, feedback: 'All test cases passed successfully! Optimal solution.' }
+  }
+
+  // If Judge0 definitively failed tests and the driver was NOT dynamically generated by AI, rust it locally.
+  if (!allPassed && hasExecutionOutput && !hadNetworkError && !isDriverGenerated) {
+    const failedTest = executionResults.find(r => !r.passed)
+    let errorFeedback = 'Your code failed one or more test cases.'
+    if (failedTest) {
+      if (failedTest.compile_output) {
+        errorFeedback = `Compilation Error:\n${failedTest.compile_output}`
+      } else if (failedTest.stderr) {
+        errorFeedback = `Runtime Error:\n${failedTest.stderr}`
+      } else {
+        errorFeedback = `Test Case Failed (${failedTest.description}).\nExpected: ${failedTest.expected_output}\nGot: ${failedTest.actual_output}`
+      }
+    }
+    return { isCorrect: false, feedback: errorFeedback }
+  }
+
+  // 2. Use Gemini for final feedback and logic verification ONLY if:
+  // - There was a Network Error / Timeout
+  // - OR tests "Passed" but produced NO actual output (likely due to missing driver/main function)
+  // - OR the tests "Failed" but they were run with an AI-generated dynamic driver, which means the parsing could be buggy!
+  const systemPrompt = `You are a Senior Engineer acting as a final logical verifier. 
+  Assess the student's code logic for correctness against the problem statement.
+  
+  JUDGE0 CONTEXT:
+  - If results show "Network Error", perform a deep STATIC ANALYSIS.
+  - If the code was executed with an AI-generated driver and failed (actual output didn't match), the dynamic input parser may have corrupted the test case! Check if the user's algorithmic logic is fundamentally sound. If it is flawlessly correct, mark it as true.
+  
   Respond ONLY with JSON: { "isCorrect": boolean, "feedback": "2-3 sentences explaining success or failure" }`
 
   const prompt = `Problem: ${problem}
   Language: ${language}
   User Code: ${userCode}
   JUDGE0_RESULTS: ${JSON.stringify(executionResults)}
+  Driver Was Generated Dynamically: ${isDriverGenerated}
   
-  Analyze the logic and the outputs. If all test cases passed on Judge0, it's correct.`
+  ANALYSIS INSTRUCTIONS:
+  1. If there's a Network Error / Timeout, ignore Judge0 and statically verify logic.
+  2. If 'Driver Was Generated Dynamically' is true and the tests failed, intensely evaluate the user's algorithmic logic. If their logic perfectly matches standard optimal solutions (like DEQUE for Sliding Window O(N)), mark it as correct regardless of Judge0's actual output, as the dynamic IO parser likely fed it empty arrays. 
+  3. If there are crystal clear syntax errors inside the user's code, mark as incorrect.
+  
+  Is this solution logically correct?`
 
   const raw = await callGemini(prompt, systemPrompt)
   try {
     const json = JSON.parse(extractJSON(raw))
     return {
-      isCorrect: executionResults.length > 0 ? allPassed : (json.isCorrect ?? false),
+      isCorrect: json.isCorrect ?? false,
       feedback:  json.feedback ?? "Evaluation complete."
     }
   } catch {

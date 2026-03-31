@@ -246,29 +246,54 @@ export default function InterviewPlayPage() {
   }
 
   const handleRunCode = () => {
+    if (!userCode.trim() || running) return
     setRunning(true)
-    const mockFeedbacks = [
-      "Running precision tests...",
-      "Executing sample case #1: PASS",
-      "Executing sample case #2: PASS",
-      "Memory efficiency: Within 128MB limit",
-      "Time complexity: O(N) verified"
-    ]
+    setGraderAlert("Connecting to Judge0 API...")
 
-    let i = 0
-    const interval = setInterval(() => {
-      if (i < mockFeedbacks.length) {
-        setGraderAlert(mockFeedbacks[i])
-        i++
-      } else {
-        clearInterval(interval)
-        setTimeout(() => {
-          setRunning(false)
-          setGraderAlert("All local checks passed! You are ready to submit.")
-          setTimeout(() => setGraderAlert(null), 3000)
-        }, 1000)
-      }
-    }, 800)
+    // Add a local timeout for the frontend fetch as well
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('TIMEOUT')), 25000)
+    )
+
+    const fetchPromise = fetch('/api/code/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        question_id: problem.id,
+        user_code: userCode,
+      }),
+    })
+
+    Promise.race([fetchPromise, timeoutPromise])
+      .then(async (res: any) => {
+        if (!res.ok) {
+          const data = await res.json().catch(() => null)
+          throw new Error(data?.error || 'Judge0 execution failed.')
+        }
+        const data = await res.json()
+        const summary = `Passed ${data.passed_count}/${data.total_count} tests.`
+        const firstFailed = (data.results || []).find((r: any) => !r.passed)
+        
+        if (data.is_ai_verified) {
+          setGraderAlert(`AI Verified: ${data.ai_feedback || 'Logic looks correct!'}`)
+        } else if (firstFailed) {
+          setGraderAlert(`${summary} Failing: ${firstFailed.description}. Expected "${firstFailed.expected_output}", got "${firstFailed.actual_output || 'no output'}"`)
+        } else {
+          setGraderAlert(`${summary} All tests passed locally! Ready for final evaluation.`)
+        }
+      })
+      .catch((err: any) => {
+        console.error(err)
+        if (err.message === 'TIMEOUT') {
+          setGraderAlert("Execution is taking longer than expected. The Judge0 public API might be overloaded, but I'll continue checking your logic.")
+        } else {
+          setGraderAlert(`Run Error: ${err.message}. I'll use logic verification for your final submission.`)
+        }
+      })
+      .finally(() => {
+        setRunning(false)
+        setTimeout(() => setGraderAlert(null), 8000)
+      })
   }
 
   const handleFinish = async () => {

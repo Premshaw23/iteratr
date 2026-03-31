@@ -4,7 +4,8 @@
   "description": "Standalone WebSocket server for real-time AI mock interviews",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "build": "echo 'No build step required for WS server'"
   },
   "dependencies": {
     "dotenv": "^16.4.5",

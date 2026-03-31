@@ -1,10 +1,11 @@
-require('dotenv').config({ path: '.env.local' })
+const path = require('path')
+require('dotenv').config({ path: path.join(__dirname, '../.env.local') })
 const { createServer } = require('http')
 const { Server } = require('socket.io')
 
 // We use the built-in fetch in Node 18+ to call Gemini
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent'
-
+// console.log(GEMINI_API_URL)
 async function callGemini(prompt, systemInstruction) {
   const apiKeys = process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.split(',').map(k => k.trim()) : []
   

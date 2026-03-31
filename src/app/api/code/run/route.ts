@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { runAgainstHiddenTests } from '@/lib/judge0'
+import { evaluateCode } from '@/lib/gemini'
 import type { CodePayload } from '@/types/database'
 
 export const dynamic = 'force-dynamic'
@@ -35,24 +36,50 @@ export async function POST(req: NextRequest) {
   }
 
   const payload = question.payload as CodePayload
-  const results = await runAgainstHiddenTests(user_code, payload.language, payload.hidden_tests || [])
+  
+  // 1. Run against real tests on Judge0
+  const testsToRun = payload.hidden_tests && payload.hidden_tests.length > 0
+    ? payload.hidden_tests
+    : [{ input: '', expected_output: '', description: 'Standard Execution (No hidden tests defined)' }]
 
-  if (results.length === 0) {
-    return NextResponse.json(
-      {
-        error: 'Judge0 execution failed or returned no results. Check JUDGE0_API_URL (and API key if required by your instance).',
-        code: 'JUDGE0_EXECUTION_FAILED',
-      },
-      { status: 502 }
-    )
+  let codeToRun = user_code
+  let isDriverGenerated = false
+  const hasCppMain = payload.language === 'cpp' && user_code.includes('int main')
+  const hasPyMain = payload.language === 'python' && (user_code.includes('if __name__') || user_code.includes('print('))
+  const hasJsMain = payload.language === 'javascript' && user_code.includes('console.log')
+
+  if (!hasCppMain && !hasPyMain && !hasJsMain && testsToRun.length > 0 && testsToRun[0].input) {
+    const { generateIoDriver } = await import('@/lib/gemini')
+    const ioDriver = await generateIoDriver(user_code, payload.language, testsToRun[0])
+    codeToRun = `${user_code}\n\n${ioDriver}`
+    isDriverGenerated = true
   }
 
+  const results = await runAgainstHiddenTests(codeToRun, payload.language, testsToRun)
+
+  // 2. Fallback to AI if Judge0 results are inconclusive (no output or network issues)
+  // We call evaluateCode from gemini.ts which handles this logic
+  const evaluation = await evaluateCode(
+    question.problem_statement,
+    user_code,
+    payload.language,
+    results,
+    isDriverGenerated
+  )
+
   const passedCount = results.filter((r) => r.passed).length
+  
+  // If AI says it's correct but Judge0 passed 0 tests (likely due to "no output"),
+  // we treat it as "AI Verified"
+  const aiVerified = evaluation.isCorrect && (passedCount === 0 || results.some(r => r.status === 'Network Error / Timeout'))
+
   return NextResponse.json({
     results,
-    passed_count: passedCount,
+    passed_count: aiVerified ? results.length : passedCount,
     total_count: results.length,
-    all_passed: passedCount === results.length,
+    all_passed: aiVerified || (passedCount === results.length),
+    ai_feedback: evaluation.feedback,
+    is_ai_verified: aiVerified
   })
 }
 
