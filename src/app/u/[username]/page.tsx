@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import Image from 'next/image'
 import MasteryRadar from '@/app/dashboard/mastery-radar'
 import EloChart from '@/app/dashboard/elo-chart'
 import { Trophy, Zap, Share2, ArrowRight, UserCheck2, ChevronDown, Calendar, Star } from 'lucide-react'
@@ -65,7 +66,7 @@ export default function PublicProfilePage() {
     return (
        <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center">
           <h1 className="text-4xl font-black text-white mb-2">404</h1>
-          <p className="text-slate-500 mb-8">This programmer hasn't created a public Iteratr profile yet.</p>
+          <p className="text-slate-500 mb-8">This programmer hasn&apos;t created a public Iteratr profile yet.</p>
           <button onClick={() => router.push('/dashboard')} className="px-6 py-2 bg-brand text-white font-bold rounded-lg">
              Go Home
           </button>
@@ -87,11 +88,16 @@ export default function PublicProfilePage() {
           
           <div className="relative mb-6">
              <div className="absolute inset-0 bg-brand/50 blur-2xl opacity-20" />
-             <img 
-              src={user.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.display_name}`} 
-              alt={user.display_name}
-              className="w-32 h-32 rounded-3xl border-4 border-white/5 bg-slate-900 shadow-2xl relative z-10"
-            />
+             <div className="relative w-32 h-32 rounded-3xl border-4 border-white/5 bg-slate-900 shadow-2xl z-10 overflow-hidden">
+               <Image 
+                src={user.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.display_name}`} 
+                alt={user.display_name}
+                width={128}
+                height={128}
+                unoptimized
+                className="w-full h-full object-cover"
+              />
+             </div>
             {user.streak_count >= 5 && (
                <div className="absolute -bottom-2 -right-2 bg-orange-500 text-white p-2 rounded-xl shadow-lg shadow-orange-500/30 z-20 border-2 border-slate-950">
                   <Zap className="w-5 h-5 fill-current" />
@@ -106,7 +112,7 @@ export default function PublicProfilePage() {
           </div>
 
           <p className="max-w-2xl text-lg text-slate-400 leading-relaxed font-medium italic">
-            "{user.reflection || 'The adaptive codebase reveals my true strengths.'}"
+            &quot;{user.reflection || 'The adaptive codebase reveals my true strengths.'}&quot;
           </p>
 
           <div className="flex gap-4 mt-10">

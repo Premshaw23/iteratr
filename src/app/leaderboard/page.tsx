@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { Trophy, Zap, Crown, ArrowUpRight, TrendingUp, Search, UserCheck2, ChevronRight, LayoutGrid, List } from 'lucide-react'
 
 interface UserRank {
@@ -58,7 +59,7 @@ export default function LeaderboardPage() {
           </div>
           <h1 className="text-5xl font-black text-white tracking-tighter mb-4">Elite Graph of Engineers</h1>
           <p className="max-w-xl text-slate-400 text-lg font-medium leading-relaxed">
-            The world's highest-rated technical problem solvers. Compete, grow, and join the elite.
+            The world&apos;s highest-rated technical problem solvers. Compete, grow, and join the elite.
           </p>
         </div>
       </div>
@@ -90,11 +91,16 @@ export default function LeaderboardPage() {
                 </div>
 
                 {/* Avatar */}
-                <img 
-                  src={user.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.display_name}`} 
-                  alt={user.display_name} 
-                  className="w-12 h-12 rounded-2xl border border-white/10 bg-slate-800 shrink-0"
-                />
+                <div className="w-12 h-12 rounded-2xl border border-white/10 bg-slate-800 shrink-0 overflow-hidden relative">
+                  <Image 
+                    src={user.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.display_name}`} 
+                    alt={user.display_name}
+                    width={48}
+                    height={48}
+                    unoptimized
+                    className="w-full h-full object-cover"
+                  />
+                </div>
 
                 {/* Name & Elo */}
                 <div className="flex-1 min-w-0">
@@ -131,7 +137,7 @@ export default function LeaderboardPage() {
          <div className="bg-slate-900 border border-white/5 p-12 rounded-[40px] relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-64 h-64 bg-brand/5 blur-3xl rounded-full -z-5 group-hover:scale-110 transition duration-1000" />
             
-            <h2 className="text-2xl font-black text-white mb-3">Think you've got what it takes?</h2>
+            <h2 className="text-2xl font-black text-white mb-3">Think you&apos;ve got what it takes?</h2>
             <p className="text-slate-500 text-sm mb-8 font-medium">Join 2,400+ engineers solving adaptive problems and testing their grit.</p>
             
             <button 

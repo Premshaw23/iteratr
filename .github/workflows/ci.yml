@@ -6,9 +6,16 @@ on:
   pull_request:
     branches: [ "main" ]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-and-lint:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
 
     steps:
     - name: Checkout repository
@@ -24,19 +31,19 @@ jobs:
       run: npm ci
 
     - name: Run linting
-      run: npm run lint
+      run: npx eslint .
 
     - name: Build Next.js application
       run: npm run build
       env:
         # Prevent telemetry during CI
         NEXT_TELEMETRY_DISABLED: 1
-        # Placeholders for build-time static checks (if any)
+        # Placeholders for build-time static checks
         NEXTAUTH_SECRET: static-placeholder-for-ci
-        NEXTAUTH_URL: http://localhost:3000
-        SUPABASE_URL: https://placeholder.supabase.co
-        SUPABASE_SERVICE_ROLE_KEY: static-placeholder-for-ci
+        GOOGLE_CLIENT_ID: static-placeholder-for-ci
+        GOOGLE_CLIENT_SECRET: static-placeholder-for-ci
+        GITHUB_CLIENT_ID: static-placeholder-for-ci
+        GITHUB_CLIENT_SECRET: static-placeholder-for-ci
         NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
         NEXT_PUBLIC_SUPABASE_ANON_KEY: static-placeholder-for-ci
-        GEMINI_API_KEY: static-placeholder-for-ci
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres

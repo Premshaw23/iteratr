@@ -30,7 +30,7 @@ export default function StatsPage() {
          setLoading(false)
       })
     }
-  }, [status])
+  }, [status, router])
 
   if (loading) return null
 

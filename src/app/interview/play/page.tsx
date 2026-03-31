@@ -77,7 +77,7 @@ export default function InterviewPlayPage() {
         content: `Hello ${session?.user?.name || 'there'}! I'm your interviewer today. We'll be working on: **${config.current_question.subtopic}**. \n\nWhenever you're ready, take a look at the problem description above the editor. How would you approach this?`
       }])
     }
-  }, [session])
+  }, [session, router])
 
   // Sync state to sessionStorage
   useEffect(() => {

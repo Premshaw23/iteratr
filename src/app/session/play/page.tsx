@@ -748,7 +748,7 @@ export default function PlayPage() {
                   </div>
                 </div>
                 <p className="text-[15px] font-medium text-amber-950 leading-relaxed italic pr-4">
-                  "{hint}"
+                  &quot;{hint}&quot;
                 </p>
               </div>
             )}

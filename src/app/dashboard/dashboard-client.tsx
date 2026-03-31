@@ -2,6 +2,7 @@
 
 import { signOut } from 'next-auth/react'
 import Link from 'next/link'
+import Image from 'next/image'
 import type { UserRow, TopicStatsRow, EloHistoryRow } from '@/types/database'
 import MasteryRadar from './mastery-radar'
 import ActivityGrid from './activity-grid'
@@ -65,7 +66,7 @@ export default function DashboardClient({ user, topicStats, eloHistory, intervie
             <button className="flex items-center gap-2 p-1 pr-3 rounded-full border border-border bg-white hover:border-brand/30 hover:shadow-md transition group-hover:bg-surface">
               <div className="w-8 h-8 rounded-full bg-brand overflow-hidden shadow-inner flex items-center justify-center text-white text-xs font-bold border-2 border-white">
                 {user.avatar_url ? (
-                  <img src={user.avatar_url} alt={user.display_name} className="w-full h-full object-cover" />
+                  <Image src={user.avatar_url} alt={user.display_name} width={32} height={32} unoptimized className="w-full h-full object-cover" />
                 ) : (
                   user.display_name.slice(0, 2).toUpperCase()
                 )}
