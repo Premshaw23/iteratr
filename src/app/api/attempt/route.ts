@@ -5,6 +5,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { calculateEloChange } from '@/lib/elo'
 import { generateMCQFeedback, evaluateCode, evaluateFillAnswers, generateUserReflection } from '@/lib/gemini'
 import type { MCQPayload, CodePayload } from '@/types/database'
+export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)

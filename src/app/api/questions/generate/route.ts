@@ -6,6 +6,7 @@ import { generateMCQ, generateFill, generateOrder, generateCodeSpace } from '@/l
 import { getTargetQuestionElo } from '@/lib/elo'
 import { getAdaptiveMentorContext } from '@/lib/mentor'
 import { checkRateLimit } from '@/lib/ratelimit'
+export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
   // Auth check
