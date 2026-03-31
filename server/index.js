@@ -67,7 +67,13 @@ async function callGemini(prompt, systemInstruction) {
   return "All interviewer nodes are currently busy. Let's pause for a second."
 }
 
-const httpServer = createServer()
+const httpServer = createServer((req, res) => {
+  if (req.method === 'GET' && req.url === '/ping') {
+    res.writeHead(200, { 'Content-Type': 'application/json' })
+    res.end(JSON.stringify({ status: 'ok', uptime: process.uptime() }))
+    return
+  }
+})
 const io = new Server(httpServer, {
   cors: {
     origin: process.env.NEXTAUTH_URL || "http://localhost:3000",

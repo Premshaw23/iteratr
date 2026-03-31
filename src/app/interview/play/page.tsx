@@ -612,9 +612,9 @@ export default function InterviewPlayPage() {
               </button>
               {observerOpen && (
                 <div className={`px-2 py-1 rounded-full border text-[9px] font-black uppercase tracking-widest ${
-                  isConnected ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-white/5 text-slate-500 border-white/10'
+                  isConnected ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
                 }`}>
-                  {isConnected ? 'Connected' : 'Offline'}
+                  {isConnected ? 'Connected (WS)' : 'Serverless (REST)'}
                 </div>
               )}
             </div>
