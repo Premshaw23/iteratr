@@ -73,6 +73,10 @@ const httpServer = createServer((req, res) => {
     res.end(JSON.stringify({ status: 'ok', uptime: process.uptime() }))
     return
   }
+
+  // Fallback for health checks or arbitrary HTTP requests
+  res.writeHead(200, { 'Content-Type': 'text/plain' })
+  res.end('Iteratr WebSocket server is running')
 })
 const io = new Server(httpServer, {
   cors: {
@@ -148,7 +152,7 @@ io.on('connection', (socket) => {
   })
 })
 
-const PORT = process.env.WS_PORT || 3001
-httpServer.listen(PORT, () => {
+const PORT = process.env.PORT || process.env.WS_PORT || 3001
+httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`WebSocket server is running on port ${PORT}`)
 })
