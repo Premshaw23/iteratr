@@ -1,0 +1,13 @@
+{
+  "name": "iteratr-ws-server",
+  "version": "1.0.0",
+  "description": "Standalone WebSocket server for real-time AI mock interviews",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "socket.io": "^4.8.3"
+  }
+}
