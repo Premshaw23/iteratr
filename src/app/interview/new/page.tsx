@@ -83,11 +83,19 @@ function InterviewNewContent() {
 
       const data = await res.json()
       if (data.question) {
-        // Clear old session persistence
-        sessionStorage.removeItem('curr_interview_code')
-        sessionStorage.removeItem('curr_interview_msgs')
+        const sessionId =
+          typeof crypto !== 'undefined' && 'randomUUID' in crypto
+            ? crypto.randomUUID()
+            : `${Date.now()}-${Math.random().toString(36).slice(2)}`
 
-        sessionStorage.setItem('interview_config', JSON.stringify({
+        // Clear old session persistence from storage
+        localStorage.removeItem('curr_interview_code')
+        localStorage.removeItem('curr_interview_msgs')
+        localStorage.removeItem('curr_interview_problem')
+        localStorage.removeItem('curr_interview_taskNum')
+        localStorage.setItem('interview_sessionId', sessionId)
+
+        localStorage.setItem('interview_config', JSON.stringify({
           topics: selectedTopics,
           difficulty,
           style,
@@ -176,6 +184,7 @@ function InterviewNewContent() {
               >
                 <option value="python">Python 3.11</option>
                 <option value="cpp">C++ 17</option>
+                <option value="java">Java 17</option>
                 <option value="javascript">JavaScript</option>
               </select>
             </div>

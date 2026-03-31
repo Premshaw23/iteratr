@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase'
+import { getISTDateString } from '@/lib/date-utils'
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
@@ -36,7 +37,6 @@ export async function GET(req: NextRequest) {
   if (!attempts) return NextResponse.json([])
 
   // 3. Count by IST date string (YYYY-MM-DD)
-  const { getISTDateString } = require('@/lib/date-utils')
   const activityMap: Record<string, number> = {}
   
   attempts.forEach(a => {

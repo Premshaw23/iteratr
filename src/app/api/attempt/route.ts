@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { calculateEloChange } from '@/lib/elo'
 import { generateMCQFeedback, evaluateCode, evaluateFillAnswers, generateUserReflection } from '@/lib/gemini'
+import { getISTDateString, getYesterdayISTDateString } from '@/lib/date-utils'
 import type { MCQPayload, CodePayload } from '@/types/database'
 export const dynamic = 'force-dynamic'
 
@@ -29,7 +30,7 @@ export async function POST(req: NextRequest) {
   // Fetch user
   const { data: user } = await supabaseAdmin
     .from('users')
-    .select('id, elo_rating, streak_count, updated_at')
+    .select('id, elo_rating, streak_count, updated_at, streak_freeze_available, last_freeze_used_at')
     .eq('email', session.user.email)
     .single()
 
@@ -151,17 +152,24 @@ export async function POST(req: NextRequest) {
       .single()
 
     // ── Update user Elo & Streak (IST TIME) ───────────────────────
-    const { getISTDateString, getYesterdayISTDateString } = require('@/lib/date-utils')
-    
     const lastDate = getISTDateString(new Date(user.updated_at))
     const todayDate = getISTDateString()
     const yesterdayDate = getYesterdayISTDateString()
 
     let newStreak = user.streak_count || 0
+    let freezeConsumed = false
+
+    // Progress the streak on any valid daily attempt (presence matters)
     if (lastDate === yesterdayDate) {
       newStreak += 1
     } else if (lastDate !== todayDate) {
-      newStreak = 1
+      // Streak broken. Check for freeze ❄️
+      if (user.streak_freeze_available) {
+        newStreak += 1 // Treat as if they were continuing
+        freezeConsumed = true
+      } else {
+        newStreak = 1 // Reset to 1 (new start)
+      }
     } else if (newStreak === 0) {
       newStreak = 1
     }
@@ -171,7 +179,9 @@ export async function POST(req: NextRequest) {
       .update({ 
         elo_rating:   eloResult.newElo, 
         streak_count: newStreak,
-        updated_at:   new Date().toISOString() 
+        updated_at:   new Date().toISOString(), // Always update last active time to today
+        streak_freeze_available: freezeConsumed ? false : user.streak_freeze_available,
+        last_freeze_used_at: freezeConsumed ? new Date().toISOString() : user.last_freeze_used_at
       })
       .eq('id', user.id)
 
@@ -191,7 +201,7 @@ export async function POST(req: NextRequest) {
       .select('*')
       .eq('user_id', user.id)
       .eq('subtopic', question.subtopic)
-      .single()
+      .maybeSingle()
 
     if (existingStat) {
       // ── UPDATE EXISTING STATS ───────────────────────────────────

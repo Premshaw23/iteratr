@@ -321,8 +321,7 @@ Instructions:
             <span className="font-semibold text-dark">Session: </span>
             {selectedTopics.length === 0 ? 'Select at least one topic' : (
               <>
-                {selectedTopics.join(', ')} · {difficulty} difficulty ·{' '}
-                {style} style · {language} · 5 questions
+                {selectedTopics.join(', ')} · {difficulty} difficulty · {style} style · {language} · {mode === 'weak_zones' ? 3 : mode === 'daily' ? 1 : 5} questions
               </>
             )}
           </div>

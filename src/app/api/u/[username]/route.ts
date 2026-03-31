@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase'
 export const dynamic = 'force-dynamic'
 
@@ -14,7 +16,7 @@ export async function GET(
     .from('users')
     .select('*')
     .eq('id', safeUsername)
-    .single()
+    .maybeSingle()
 
   // 2. Fallback to Display Name if not found (for friendly URLs)
   if (!user) {
@@ -23,12 +25,27 @@ export async function GET(
       .select('*')
       .ilike('display_name', safeUsername)
       .limit(1)
-      .single()
+      .maybeSingle()
     user = userByName
   }
 
   if (!user) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 })
+  }
+
+  // ── Privacy Check ──
+  const session = await getServerSession(authOptions)
+  const isOwner = session?.user?.email === user.email
+
+  if (!user.is_public && !isOwner) {
+    return NextResponse.json({ 
+      error: 'This profile is private',
+      user: {
+        display_name: user.display_name,
+        avatar_url:   user.avatar_url,
+        is_private:   true
+      }
+    }, { status: 403 })
   }
 
   // 2. Fetch public stats
@@ -45,6 +62,14 @@ export async function GET(
     .order('created_at', { ascending: false })
     .limit(30)
 
+  // 4. Compute simple aggregate metrics for the profile view
+  const safeStats = stats ?? []
+  const totalSolved = safeStats.reduce((acc, s: any) => acc + (s.solved_count ?? 0), 0)
+  const totalFails  = safeStats.reduce((acc, s: any) => acc + (s.fail_count ?? 0), 0)
+  const totalAttempts = totalSolved + totalFails
+  const accuracyPct = totalAttempts === 0 ? 0 : Math.round((totalSolved / totalAttempts) * 100)
+  const weakZoneCount = safeStats.filter((s: any) => s.is_weak_zone).length
+
   return NextResponse.json({
     user: {
       id:           user.id,
@@ -54,7 +79,14 @@ export async function GET(
       streak_count: user.streak_count,
       reflection:   user.reflection_text,
     },
-    stats:   stats ?? [],
+    stats:   safeStats,
     history: history ?? [],
+    metrics: {
+      total_attempts: totalAttempts,
+      solved_count: totalSolved,
+      fail_count: totalFails,
+      accuracy_percent: accuracyPct,
+      weak_zone_count: weakZoneCount,
+    },
   })
 }

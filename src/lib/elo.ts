@@ -32,6 +32,7 @@ export function calculateEloChange(input: EloInput): EloResult {
 
   let change: number
   let reason: string
+  let streakMultiplier = 1
 
   if (isCorrect) {
     // Base change from Elo formula
@@ -56,13 +57,14 @@ export function calculateEloChange(input: EloInput): EloResult {
 
     // Apply streak multiplier (1.1x, 1.2x, ..., up to 1.5x)
     if (streakCount > 0) {
-      const multiplier = Math.min(1.5, 1 + (streakCount * 0.1))
-      change = Math.round(change * multiplier)
+      streakMultiplier = Math.min(1.5, 1 + (streakCount * 0.1))
+      change = Math.round(change * streakMultiplier)
     }
 
+    const streakTag = streakMultiplier > 1 ? `, streak x${streakMultiplier.toFixed(1)}` : ''
     reason = hintsUsed === 0
-      ? `Correct, no hints${timeModifier > 0 ? ', fast' : ''}`
-      : `Correct, ${hintsUsed} hint${hintsUsed > 1 ? 's' : ''} used`
+      ? `Correct, no hints${timeModifier > 0 ? ', fast' : ''}${streakTag}`
+      : `Correct, ${hintsUsed} hint${hintsUsed > 1 ? 's' : ''} used${streakTag}`
 
   } else {
     // Wrong — lose points based on how easy the question was relative to user

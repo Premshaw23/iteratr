@@ -5,6 +5,8 @@
 
 -- Enable UUID generation
 create extension if not exists "pgcrypto";
+-- Enable Vector support for RAG
+create extension if not exists "vector";
 
 -- ── users ────────────────────────────────────────────────────
 create table if not exists users (
@@ -18,6 +20,11 @@ create table if not exists users (
   streak_count        integer     not null default 0,
   longest_streak      integer     not null default 0,
   reflection_text     text,
+  streak_freeze_available boolean     not null default true,
+  last_freeze_used_at timestamptz,
+  is_public           boolean     not null default true,
+  unlocked_badges     text[]      not null default '{}',
+  is_pro              boolean     not null default false,
   created_at          timestamptz not null default now(),
   updated_at          timestamptz not null default now()
 );
@@ -40,6 +47,7 @@ create table if not exists questions (
   hints               text[]      not null default '{}',
   explanation         text        not null default '',
   tags                text[]      not null default '{}',
+  is_daily_challenge  boolean     not null default false,
   created_at          timestamptz not null default now()
 );
 
@@ -98,6 +106,43 @@ create table if not exists topic_stats (
   unique(user_id, subtopic)
 );
 
+-- ── knowledge_base (RAG) ──────────────────────────────────────
+create table if not exists knowledge_base (
+  id                    uuid        primary key default gen_random_uuid(),
+  content               text        not null,
+  metadata              jsonb       not null default '{}',
+  embedding             vector(768), -- Gemini standard embedding size
+  created_at            timestamptz not null default now()
+);
+
+-- ── Similarity Search Function ──
+create or replace function match_knowledge (
+  query_embedding vector(768),
+  match_threshold float,
+  match_count int
+)
+returns table (
+  id uuid,
+  content text,
+  metadata jsonb,
+  similarity float
+)
+language plpgsql
+as $$
+begin
+  return query
+  select
+    knowledge_base.id,
+    knowledge_base.content,
+    knowledge_base.metadata,
+    1 - (knowledge_base.embedding <=> query_embedding) as similarity
+  from knowledge_base
+  where 1 - (knowledge_base.embedding <=> query_embedding) > match_threshold
+  order by similarity desc
+  limit match_count;
+end;
+$$;
+
 -- ═══════════════════════════════════════════════════════════
 -- INDEXES — speeds up common queries
 -- ═══════════════════════════════════════════════════════════
@@ -120,6 +165,7 @@ begin
 end;
 $$ language plpgsql;
 
+drop trigger if exists users_updated_at on users;
 create trigger users_updated_at
   before update on users
   for each row execute function update_updated_at();
@@ -169,6 +215,11 @@ create policy "Topic stats: upsert own"
   on topic_stats for insert with check (auth.uid()::text = user_id);
 create policy "Topic stats: update own"
   on topic_stats for update using (auth.uid()::text = user_id);
+
+-- Knowledge base: public select
+alter table knowledge_base enable row level security;
+create policy "Knowledge base is public"
+  on knowledge_base for select using (true);
 
 -- ═══════════════════════════════════════════════════════════
 -- DONE — your schema is ready

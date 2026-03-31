@@ -3,6 +3,7 @@
 // Handles question generation and hint generation
 // ─────────────────────────────────────────────────────────────
 import { MCQSchema, FillSchema, OrderSchema, CodeSchema, InterviewScorecardSchema } from './schemas'
+import { runAgainstHiddenTests } from './judge0'
 
 const GEMINI_API_URL =
   'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent'
@@ -221,6 +222,8 @@ export interface HintRequest {
   hints_so_far:      string[]
 }
 
+import { searchKnowledge } from './vector'
+
 export async function generateHint(req: HintRequest): Promise<{ hint: string, reasoning: string }> {
   const levelDescriptions = {
     1: 'Explain WHY the submitted code/answer is logically wrong. Do NOT point toward the correct solution. Focus on what conceptual gap caused the error.',
@@ -229,11 +232,18 @@ export async function generateHint(req: HintRequest): Promise<{ hint: string, re
     4: 'Give a complete explanation with annotated code. This is the final hint — be thorough.',
   }
 
+  // 🔎 RAG: Search for relevant context in knowledge base
+  const context = await searchKnowledge(req.problem_statement + ' ' + req.failed_test)
+  const knowledgeContext = context.length > 0 
+    ? `\n\n[RELEVANT KNOWLEDGE BASE CONTEXT]:\n${context.map(c => c.content).join('\n---\n')}`
+    : ''
+
   const systemPrompt = `You are an agentic Socratic coding mentor. 
 Your process is REASON -> ACT -> HINT.
 1. REASON: Analyze the user's code, the failed test case, and the error output. Identify the EXACT conceptual gap.
 2. ACT: Select the most helpful strategy for the requested hint level.
 3. HINT: Generate the final hint text.
+${knowledgeContext}
 
 STRICT RULES:
 - Never give the answer directly unless it's Level 4.
@@ -487,39 +497,6 @@ Rules:
 // CODE EVALUATION
 // ─────────────────────────────────────────────────────────────
 
-const LANG_MAP: Record<string, number> = {
-  python:     71,
-  cpp:        54,
-  javascript: 63
-}
-
-async function runOnJudge0(source_code: string, language: string, stdin?: string) {
-  const apiKey = process.env.JUDGE0_API_KEY
-  const apiUrl = process.env.JUDGE0_API_URL || 'https://ce.judge0.com'
-  if (!apiKey) return null
-
-  try {
-    const res = await fetch(`${apiUrl}/submissions?base64_encoded=false&wait=true`, {
-      method:  'POST',
-      headers: {
-        'Content-Type':   'application/json',
-        'X-Auth-Token':   apiKey, // Official Judge0 CE uses X-Auth-Token
-      },
-      body: JSON.stringify({
-        source_code,
-        language_id: LANG_MAP[language] || 71,
-        stdin
-      })
-    })
-
-    if (!res.ok) return null
-    return await res.json()
-  } catch (err) {
-    console.error('Judge0 Error:', err)
-    return null
-  }
-}
-
 export async function evaluateCode(
   problem: string,
   userCode: string,
@@ -527,22 +504,11 @@ export async function evaluateCode(
   hiddenTests: { input: string, expected_output: string, description: string }[]
 ): Promise<{ isCorrect: boolean, feedback: string }> {
   
-  let executionResults: any[] = []
-  let allPassed = true
-
   // 1. Try real execution on Judge0
-  if (process.env.JUDGE0_API_KEY) {
-    for (const test of hiddenTests) {
-      const result = await runOnJudge0(userCode, language, test.input)
-      if (result) {
-        const stdout   = (result.stdout || '').trim()
-        const expected = (test.expected_output || '').trim()
-        const passed   = stdout === expected
-        executionResults.push({ input: test.input, stdout, status: result.status?.description, passed })
-        if (!passed) allPassed = false
-      }
-    }
-  }
+  const executionResults = process.env.JUDGE0_API_KEY
+    ? await runAgainstHiddenTests(userCode, language, hiddenTests)
+    : []
+  const allPassed = executionResults.length > 0 && executionResults.every(r => r.passed)
 
   // 2. Use Gemini for final feedback and logic verification
   const systemPrompt = `You are a code execution engine and mentor. 

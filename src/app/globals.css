@@ -1,5 +1,5 @@
 @import 'katex/dist/katex.min.css';
-
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@300;400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -17,8 +17,14 @@
     --success:     #10b981;
     --warning:     #f59e0b;
     --danger:      #ef4444;
-    --glass:       rgba(255, 255, 255, 0.7);
-    --glass-border: rgba(255, 255, 255, 0.3);
+    --glass:       rgba(255, 255, 255, 0.6);
+    --glass-border: rgba(255, 255, 255, 0.4);
+    --glass-heavy: rgba(255, 255, 255, 0.85);
+    
+    /* Premium accents */
+    --accent-indigo: #6366f1;
+    --accent-purple: #8b5cf6;
+    --accent-emerald: #10b981;
   }
 
   * {
@@ -61,19 +67,81 @@
   /* Premium Utilities */
   .bg-glass {
     background: var(--glass);
-    backdrop-filter: blur(12px);
+    backdrop-filter: blur(16px) saturate(180%);
     border: 1px solid var(--glass-border);
+  }
+
+  .bg-glass-heavy {
+    background: var(--glass-heavy);
+    backdrop-filter: blur(24px);
+    border: 1px solid var(--glass-border);
+  }
+
+  .transition-premium {
+    transition: all 0.4s cubic-bezier(0.2, 1, 0.3, 1);
+  }
+
+  .nav-active {
+    @apply text-brand font-black !important;
+  }
+
+  .nav-active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 20%;
+    right: 20%;
+    height: 2px;
+    background: var(--brand);
+    border-radius: 2px;
+    box-shadow: 0 0 10px var(--brand);
+  }
+
+  .sidebar-link-active {
+    @apply bg-brand-light text-brand font-black shadow-sm !important;
   }
 
   .gradient-mesh {
     background-color: #f8fafc;
     background-image: 
-      radial-gradient(at 100% 0%, rgba(59, 130, 246, 0.1) 0px, transparent 50%),
-      radial-gradient(at 0% 100%, rgba(139, 92, 246, 0.1) 0px, transparent 50%);
+      radial-gradient(at 100% 0%, rgba(59, 130, 246, 0.08) 0px, transparent 50%),
+      radial-gradient(at 0% 100%, rgba(139, 92, 246, 0.08) 0px, transparent 50%),
+      radial-gradient(at 50% 50%, rgba(59, 246, 201, 0.03) 0px, transparent 50%);
+  }
+
+  .animate-shimmer {
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.2) 50%,
+      rgba(255, 255, 255, 0) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 3s infinite linear;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  @keyframes pulse-slow {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.85; transform: scale(0.98); }
+  }
+
+  .animate-pulse-slow {
+    animation: pulse-slow 4s ease-in-out infinite;
   }
 
   .gradient-brand {
-    background: linear-gradient(135deg, var(--brand) 0%, #6366f1 100%);
+    background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%) !important;
+    color: white !important;
+  }
+
+  .gradient-pro {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%) !important;
+    color: white !important;
   }
 
   .card-hover {
@@ -90,8 +158,13 @@
     100% { transform: translateY(0px); }
   }
 
-  .animate-pulse-slow {
-    animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  /* Layout helpers for marketing pages */
+  .section-shell {
+    @apply px-6 md:px-10;
+  }
+
+  .section-inner {
+    @apply max-w-7xl mx-auto;
   }
 }
 

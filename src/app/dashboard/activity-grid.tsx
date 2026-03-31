@@ -129,9 +129,21 @@ export default function ActivityGrid({
 
   if (loading) {
     return (
-      <div className="w-full rounded-2xl border border-slate-100 bg-white p-8 shadow-sm animate-pulse">
-        <div className="h-4 w-48 bg-slate-50 rounded mb-4" />
-        <div className="h-32 w-full bg-slate-50/50 rounded-xl" />
+      <div className="w-full rounded-2xl border border-slate-100 bg-white p-8 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-6 mb-8 mt-1">
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-emerald-50/50 flex items-center justify-center animate-pulse" />
+              <div className="h-4 w-32 bg-slate-100 rounded-full animate-pulse" />
+            </div>
+            <div className="h-2 w-48 bg-slate-50 rounded-full animate-pulse" />
+          </div>
+          <div className="h-8 w-32 bg-slate-100 rounded-xl animate-pulse" />
+        </div>
+        <div className="w-full h-[120px] bg-slate-50/50 rounded-xl animate-pulse" />
+        <div className="flex justify-end pt-4 mt-6 border-t border-slate-50">
+          <div className="h-3 w-32 bg-slate-50 rounded-full animate-pulse" />
+        </div>
       </div>
     )
   }

@@ -16,10 +16,10 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json()
-  const { topic = 'arrays', subtopic, customPrompt, language = 'cpp' } = body
+  const { topic = 'arrays', subtopic, customPrompt, language = 'cpp', isDaily = false, forceType } = body
   const { data: user } = await supabaseAdmin
     .from('users')
-    .select('id, elo_rating')
+    .select('id, elo_rating, is_pro')
     .eq('email', session.user.email)
     .single()
 
@@ -28,16 +28,43 @@ export async function POST(req: NextRequest) {
   }
 
   // ── RATE LIMIT ──────────────────────────────────
-  const isAllowed = await checkRateLimit(user.id, 200, 1440) // 200 questions per 24h
-  if (!isAllowed) {
-    return NextResponse.json({ error: 'Daily question limit (200) reached. Try again in 24 hours.' }, { status: 429 })
+    const { allowed, nearLimit, graceActive } = await checkRateLimit(user.id, user.is_pro)
+    if (!allowed) {
+      return NextResponse.json({ 
+        error: 'Technical Quota Exhausted',
+        message: user.is_pro 
+          ? 'You have reached your high-intensity daily limit. Please allow our engines to cool down and return tomorrow for a fresh reset.' 
+          : 'Your daily technical evaluation quota is full. To maintain high-fidelity training for all users, please wait until tomorrow or upgrade to Pro for unlimited compute cycles.',
+        code: 'QUOTA_EXCEEDED',
+        is_pro: user.is_pro
+      }, { status: 429 })
+    }
+
+  // ── 1. Check for Daily Challenge if requested ──────────────────
+  if (isDaily) {
+    const today = new Date().toISOString().split('T')[0]
+    const { data: dailyQ } = await supabaseAdmin
+      .from('questions')
+      .select('*')
+      .eq('is_daily_challenge', true)
+      .gte('created_at', `${today}T00:00:00Z`)
+      .limit(1)
+      .single()
+
+    if (dailyQ) {
+      return NextResponse.json({ question: dailyQ, source: 'daily' })
+    }
   }
 
-  // ── 1. Decide on a question type first ──────────────────────────
+  // ── 2. Decide on a question type first ──────────────────────────
   const types: ('mcq' | 'fill' | 'order' | 'code')[] = ['mcq', 'fill', 'order', 'code']
-  const typeToGenerate = types[Math.floor(Math.random() * types.length)]
+  const forcedType = typeof forceType === 'string' ? forceType.toLowerCase() : null
+  const typeToGenerate =
+    forcedType === 'mcq' || forcedType === 'fill' || forcedType === 'order' || forcedType === 'code'
+      ? (forcedType as 'mcq' | 'fill' | 'order' | 'code')
+      : types[Math.floor(Math.random() * types.length)]
 
-  // ── 2. Check if a suitable question exists in Cache ───────────
+  // ── 3. Check if a suitable question exists in Cache ───────────
   // Fetch IDs of questions the user has already solved
   const { data: attempted } = await supabaseAdmin
     .from('attempts')
@@ -69,7 +96,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // ── 3. Fallback: Generate fresh question from Gemini ──────────
+  // ── 4. Fallback: Generate fresh question from Gemini ──────────
   try {
     const adaptiveContext = await getAdaptiveMentorContext(session.user.email)
 
@@ -83,15 +110,16 @@ export async function POST(req: NextRequest) {
     const { data: saved, error } = await supabaseAdmin
       .from('questions')
       .insert({
-        type:              generated.type,
-        topic:             generated.topic as any,
-        subtopic:          generated.subtopic,
-        difficulty_elo:    generated.difficulty_elo,
-        problem_statement: generated.problem_statement,
-        payload:           generated.payload,
-        hints:             generated.hints,
-        explanation:       generated.explanation,
-        tags:              generated.tags,
+        type:               generated.type,
+        topic:              generated.topic as any,
+        subtopic:           generated.subtopic,
+        difficulty_elo:     generated.difficulty_elo,
+        problem_statement:  generated.problem_statement,
+        payload:            generated.payload,
+        hints:              generated.hints,
+        explanation:        generated.explanation,
+        tags:               generated.tags,
+        is_daily_challenge: isDaily,
       })
       .select()
       .single()

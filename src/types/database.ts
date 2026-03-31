@@ -72,6 +72,11 @@ export interface Database {
           streak_count: number
           longest_streak: number
           reflection_text: string | null // AI-generated memory
+          streak_freeze_available: boolean
+          last_freeze_used_at: string | null
+          is_public: boolean
+          unlocked_badges: string[]
+          is_pro: boolean
           created_at: string
           updated_at: string
         }
@@ -85,6 +90,11 @@ export interface Database {
           streak_count?: number
           longest_streak?: number
           reflection_text?: string | null
+          streak_freeze_available?: boolean
+          last_freeze_used_at?: string | null
+          is_public?: boolean
+          unlocked_badges?: string[]
+          is_pro?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -105,6 +115,7 @@ export interface Database {
           hints: string[]              // array of 4 hint strings
           explanation: string          // full explanation shown after level 4
           tags: string[]
+          is_daily_challenge: boolean
           created_at: string
         }
         Insert: Omit<Database['public']['Tables']['questions']['Row'], 'id' | 'created_at'> & {
@@ -209,12 +220,49 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['topic_stats']['Insert']>
         Relationships: []
       }
+
+      knowledge_base: {
+        Row: {
+          id: string
+          content: string
+          metadata: any
+          embedding: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          content: string
+          metadata?: any
+          embedding?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          content: string
+          metadata?: any
+          embedding?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      match_knowledge: {
+        Args: {
+          query_embedding: string
+          match_threshold: number
+          match_count: number
+        }
+        Returns: {
+          id: string
+          content: string
+          metadata: any
+          similarity: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

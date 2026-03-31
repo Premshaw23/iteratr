@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { signIn, useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
@@ -21,36 +22,47 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-surface flex items-center justify-center px-4">
+    <div className="min-h-screen bg-[#08090d] text-white flex items-center justify-center px-4">
       <div className="w-full max-w-md">
+        {/* Top bar with home button */}
+        <div className="mb-6 flex items-center justify-between text-xs text-slate-400">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1 font-medium hover:bg-white/10 hover:text-white transition"
+          >
+            <span className="text-[10px]">←</span>
+            Home
+          </Link>
+          <span className="uppercase tracking-[0.25em] text-[10px] text-slate-500">
+            iteratr login
+          </span>
+        </div>
 
-        {/* Logo */}
-        <div className="text-center mb-10">
-          <h1 className="text-5xl font-bold text-brand tracking-tight">iteratr</h1>
-          <p className="mt-3 text-mid text-sm">
-            Pair-program with a senior engineer.<br />
-            Never just be told you&apos;re wrong.
+        {/* Logo / headline */}
+        <div className="mb-8 text-left">
+          <h1 className="text-4xl font-black tracking-tight">
+            <span className="text-white">iter</span>
+            <span className="text-brand">atr</span>
+          </h1>
+          <p className="mt-3 text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">
+            Adaptive technical mentor
           </p>
         </div>
 
         {/* Card */}
-        <div className="bg-white rounded-2xl border border-border p-8">
-          <h2 className="text-xl font-semibold text-dark mb-1">Sign in to continue</h2>
-          <p className="text-muted text-sm mb-8">
-            Your Elo rating, progress, and session history are saved automatically.
+        <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-8 shadow-2xl shadow-black/40">
+          <h2 className="text-xl font-semibold text-white mb-1">Sign in to continue</h2>
+          <p className="text-xs text-slate-400 mb-6">
+            Your Elo rating, weak zones, and mock interviews are all tied to this account.
           </p>
 
           {/* Google */}
           <button
             onClick={() => handleSignIn('google')}
             disabled={loading !== null}
-            className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl border border-border bg-white hover:bg-surface transition text-sm font-medium text-dark mb-3 disabled:opacity-60"
+            className="mb-3 flex w-full items-center justify-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white hover:bg-white/10 transition disabled:opacity-60"
           >
-            {loading === 'google' ? (
-              <Spinner />
-            ) : (
-              <GoogleIcon />
-            )}
+            {loading === 'google' ? <Spinner /> : <GoogleIcon />}
             Continue with Google
           </button>
 
@@ -58,34 +70,33 @@ export default function LoginPage() {
           <button
             onClick={() => handleSignIn('github')}
             disabled={loading !== null}
-            className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl border border-border bg-white hover:bg-surface transition text-sm font-medium text-dark disabled:opacity-60"
+            className="flex w-full items-center justify-center gap-3 rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-sm font-medium text-white hover:bg-slate-800 transition disabled:opacity-60"
           >
-            {loading === 'github' ? (
-              <Spinner />
-            ) : (
-              <GitHubIcon />
-            )}
+            {loading === 'github' ? <Spinner /> : <GitHubIcon />}
             Continue with GitHub
           </button>
 
           {/* Divider */}
-          <div className="mt-8 pt-6 border-t border-border">
-            <p className="text-xs text-muted text-center">
-              No password needed. One click and you&apos;re in.
-            </p>
+          <div className="mt-6 border-t border-white/10 pt-4 text-center text-[11px] text-slate-500">
+            No password needed. One click and you&apos;re in.
           </div>
         </div>
 
-        {/* Features teaser */}
-        <div className="mt-8 grid grid-cols-3 gap-4 text-center">
+        {/* Feature hints */}
+        <div className="mt-6 grid grid-cols-3 gap-3 text-center text-[11px] text-slate-300">
           {[
-            { icon: '⚡', label: 'Elo rating system' },
-            { icon: '🧠', label: 'AI Socratic hints' },
+            { icon: '⚡', label: 'Elo tracking' },
+            { icon: '🧠', label: 'Socratic hints' },
             { icon: '🎯', label: 'Mock interviews' },
           ].map((f) => (
-            <div key={f.label} className="bg-white rounded-xl border border-border p-4">
-              <div className="text-xl mb-1">{f.icon}</div>
-              <div className="text-xs text-mid font-medium">{f.label}</div>
+            <div
+              key={f.label}
+              className="rounded-xl border border-white/5 bg-white/5 px-2 py-3"
+            >
+              <div className="mb-1 text-lg">{f.icon}</div>
+              <div className="font-medium text-[10px] uppercase tracking-[0.12em] text-slate-400">
+                {f.label}
+              </div>
             </div>
           ))}
         </div>

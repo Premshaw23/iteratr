@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { generateInterviewResponse, generateSilentGraderFeedback } from '@/lib/gemini'
+import { searchKnowledge } from '@/lib/vector'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase'
@@ -20,7 +21,7 @@ export async function POST(req: NextRequest) {
     if (session?.user?.email) {
       const { data: user } = await supabaseAdmin
         .from('users')
-        .select('id')
+        .select('id, reflection_text')
         .eq('email', session.user.email)
         .single()
       
@@ -33,14 +34,27 @@ export async function POST(req: NextRequest) {
           .limit(5)
       
         if (stats && stats.length > 0) {
-          memoryContextString = `CANDIDATE HISTORICAL CONTEXT (Weak zones detected): \n${stats.map(s => `- ${s.subtopic} (${s.fail_count} failures)`).join('\n')}\nUse this cautiously to test their growth in related areas.`
+          memoryContextString = `CANDIDATE HISTORICAL CONTEXT:
+- WEAK ZONES:
+${stats.map(s => `  • ${s.subtopic} (${s.fail_count} failures)`).join('\n')}
+${user.reflection_text ? `- REFLECTION SUMMARY:\n  "${user.reflection_text}"\n` : ''}
+Use this cautiously to test their growth in related areas.`
         }
       }
     }
 
+    // --- ENHANCEMENT: RAG Context (pgvector) ---
+    // Pull a few relevant KB chunks for the current problem + latest message.
+    const latest = Array.isArray(history) && history.length > 0 ? history[history.length - 1]?.content : ''
+    const ragHits = await searchKnowledge(`${problem}\n${latest}`, 0.45, 3)
+    const ragContext =
+      ragHits.length > 0
+        ? `\n\n[RELEVANT KNOWLEDGE BASE CONTEXT]:\n${ragHits.map((h: any) => h.content).join('\n---\n')}`
+        : ''
+
     // 1. Call Interviewer and Silent Grader in parallel
     const [interviewerResponse, silentGraderFeedback] = await Promise.all([
-      generateInterviewResponse(problem, history, userCode, style, memoryContextString),
+      generateInterviewResponse(problem, history, userCode, style, memoryContextString + ragContext),
       generateSilentGraderFeedback(problem, history, userCode)
     ])
 

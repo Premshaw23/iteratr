@@ -49,6 +49,7 @@ export default function PlayPage() {
   const [startTime]                     = useState(Date.now())
   const [leftWidth,     setLeftWidth]   = useState(40) // Percentage
   const [isResizing,    setIsResizing]  = useState(false)
+  const [running,       setRunning]     = useState(false)
 
   // ── PANEL RESIZING (Phase 3) ──────────────────────────────────
   const startResizing = useCallback(() => setIsResizing(true), [])
@@ -101,6 +102,48 @@ export default function PlayPage() {
   const isFill   = question.type === 'fill'
   const isOrder  = question.type === 'order'
   const isCode   = question.type === 'code'
+
+  const handleRunCode = () => {
+    if (!isCode || !userCode.trim() || running || submitting) return
+    setRunning(true)
+    setFeedback('Running hidden tests on Judge0...')
+
+    fetch('/api/code/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        question_id: question.id,
+        user_code: userCode,
+      }),
+    })
+      .then(async (res) => {
+        const data = await res.json().catch(() => null)
+        if (!res.ok) {
+          const msg =
+            data?.code === 'JUDGE0_NOT_CONFIGURED'
+              ? 'Judge0 is not configured on this environment.'
+              : data?.error || 'Judge0 execution failed.'
+          setFeedback(msg)
+          return
+        }
+
+        const summary = `Passed ${data.passed_count}/${data.total_count} hidden tests.`
+        const firstFailed = (data.results || []).find((r: any) => !r.passed)
+        if (firstFailed) {
+          setFeedback(
+            `${summary} First failing case: ${firstFailed.description}. Expected "${firstFailed.expected_output}", got "${firstFailed.actual_output}".`
+          )
+        } else {
+          setFeedback(`${summary} All hidden tests passed. Proceed to final verification.`)
+        }
+      })
+      .catch(() => {
+        setFeedback('Judge0 request failed. Check network/config and try again.')
+      })
+      .finally(() => {
+        setRunning(false)
+      })
+  }
 
   // ── Submit answer ─────────────────────────────────────────────
   const handleSubmit = async () => {
@@ -220,7 +263,12 @@ export default function PlayPage() {
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: 'API failure' }))
-      alert(err.message || 'Failed to generate next question. Your Gemini quota might be exhausted.')
+      if (err.code === 'QUOTA_EXCEEDED') {
+        alert(err.message)
+        router.push('/subscribe')
+      } else {
+        alert(err.message || 'Failed to generate next question. Your Gemini quota might be exhausted.')
+      }
       setPhase('submitted')
       return
     }
@@ -439,11 +487,37 @@ export default function PlayPage() {
                   </div>
                 )}
                 {feedback && (
-                  <div className={`border rounded-2xl p-6 ${isCorrect ? 'bg-green-50/50 border-green-200' : 'bg-red-50/50 border-red-200'}`}>
-                    <p className={`text-xs font-black uppercase tracking-widest mb-2 ${isCorrect ? 'text-green-700' : 'text-red-700'}`}>
-                      {isCorrect ? 'Logic Verified' : 'Logic Failure'}
-                    </p>
-                    <p className="text-[14px] leading-relaxed text-dark font-medium">{feedback}</p>
+                  <div className={`border rounded-2xl p-6 transition-all duration-300 ${
+                    isCorrect === true ? 'bg-emerald-50/50 border-emerald-200 shadow-sm shadow-emerald-100/20'
+                    : isCorrect === false ? 'bg-rose-50/50 border-rose-200 shadow-sm shadow-rose-100/20'
+                    : 'bg-indigo-50/50 border-indigo-200 shadow-sm shadow-indigo-100/20'
+                  }`}>
+                    <div className="flex items-center justify-between mb-3">
+                      <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${
+                        isCorrect === true ? 'text-emerald-700'
+                        : isCorrect === false ? 'text-rose-700'
+                        : 'text-indigo-700'
+                      }`}>
+                        {isCorrect === true ? 'Judgment: Logic Verified' 
+                          : isCorrect === false ? 'Judgment: Logic Failure' 
+                          : 'Local Environment: Simulation'}
+                      </p>
+                      {isCorrect === null && running && (
+                        <div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+                      )}
+                    </div>
+                    <p className={`text-[14px] leading-relaxed font-medium ${
+                      isCorrect === true ? 'text-emerald-950'
+                      : isCorrect === false ? 'text-rose-950'
+                      : 'text-indigo-950'
+                    }`}>{feedback}</p>
+                    
+                    {isCorrect === null && !running && feedback.includes("Proceed") && (
+                      <div className="mt-4 pt-4 border-t border-indigo-100 flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-600" />
+                        <span className="text-[10px] font-black text-indigo-700 uppercase tracking-widest">Compiler sanity check: Complete</span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -484,12 +558,18 @@ export default function PlayPage() {
                         )}
                       </button>
                       <button
-                        onClick={handleSubmit}
-                        disabled={submitting || !userCode.trim()}
-                        className="flex items-center gap-2 px-6 py-1.5 bg-brand text-white text-xs font-black rounded-lg hover:bg-brand-dark transition disabled:opacity-40"
+                        onClick={handleRunCode}
+                        disabled={running || submitting}
+                        className="flex items-center gap-2 px-4 py-1.5 text-xs font-bold text-slate-400 hover:text-white bg-slate-800/50 hover:bg-slate-700/50 border border-white/5 rounded-lg transition disabled:opacity-40"
                       >
-                        <Play className="w-3.5 h-3.5 fill-current" />
-                        Run & Verify
+                        {running ? 'Running...' : 'Run Code'}
+                      </button>
+                      <button
+                        onClick={handleSubmit}
+                        disabled={submitting || running || !userCode.trim()}
+                        className="flex items-center gap-2 px-6 py-1.5 bg-brand text-white text-xs font-black rounded-lg hover:bg-brand-dark transition shadow-lg shadow-brand/20 disabled:opacity-40"
+                      >
+                        {submitting ? 'Verifying...' : 'Final Submit'}
                       </button>
                     </>
                   ) : (
@@ -592,30 +672,30 @@ export default function PlayPage() {
       </header>
 
       {/* Main content wrapper */}
-      <div className="max-w-4xl mx-auto px-6 py-12 flex flex-col min-h-[calc(100vh-64px)]">
+      <div className="max-w-4xl mx-auto px-3 py-4 flex flex-col min-h-[calc(100vh-64px)]">
         
         {/* Dynamic Question Area */}
         <div className="flex-1">
-          <div className="bg-white border border-slate-200/60 rounded-[32px] shadow-2xl shadow-slate-200/50 overflow-hidden relative group">
-            <div className="absolute top-0 left-0 w-full h-1.5 bg-brand/10 group-hover:bg-brand/20 transition-colors" />
+          <div className="bg-white border border-slate-200/60 rounded-[24px] shadow-xl shadow-slate-200/30 overflow-hidden relative group">
+            <div className="absolute top-0 left-0 w-full h-1 bg-brand/10 group-hover:bg-brand/20 transition-colors" />
             
-            <div className="p-10">
+            <div className="p-4 md:p-6">
               {/* Question Header Meta */}
-              <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-brand/10 border border-brand/10 rounded-full">
+                  <div className="flex items-center gap-2 px-2 py-1 bg-brand/10 border border-brand/10 rounded-full">
                     <div className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse" />
                     <span className="text-[10px] font-black text-brand uppercase tracking-widest leading-none">
                       {question.topic?.replace(/_/g,' ')}
                     </span>
                   </div>
-                  <div className="px-3 py-1.5 bg-slate-100 rounded-full">
+                  <div className="px-2 py-1 bg-slate-100 rounded-full">
                     <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">
                       {question.type}
                     </span>
                   </div>
                 </div>
-                <div className="px-3 py-1.5 bg-amber-50 border border-amber-100 rounded-full flex items-center gap-2">
+                <div className="px-2 py-1 bg-amber-50 border border-amber-100 rounded-full flex items-center gap-2">
                    <LayoutList size={12} className="text-amber-600" />
                    <span className="text-[10px] font-black text-amber-700 font-mono tracking-tighter">
                      Elo {question.difficulty_elo}
@@ -624,19 +704,19 @@ export default function PlayPage() {
               </div>
 
               {/* Problem Container */}
-              <div className="mb-10 min-h-[120px]">
-                <div className="text-xl md:text-2xl font-bold text-slate-900 leading-snug tracking-tight mb-2">
+              <div className="mb-6 min-h-[80px]">
+                <div className="text-lg md:text-xl font-bold text-slate-900 leading-snug tracking-tight mb-1">
                   {question.subtopic}
                 </div>
-                <div className="pt-4 border-t border-slate-50">
+                <div className="pt-2 border-t border-slate-50">
                   {renderStatement()}
                 </div>
               </div>
 
               {/* Interaction Elements */}
-              <div className="space-y-4">
+              <div className="space-y-2">
                 {isMCQ && (
-                  <div className="grid grid-cols-1 gap-3">
+                  <div className="grid grid-cols-1 gap-2">
                     {(question.payload as MCQPayload).options.map((option: string, i: number) => (
                       <div
                         key={i}
@@ -667,7 +747,7 @@ export default function PlayPage() {
                 )}
 
                 {isOrder && (
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {orderSteps.map((step, i) => (
                       <div
                         key={step}
@@ -708,13 +788,13 @@ export default function PlayPage() {
                 )}
 
                 {isFill && phase === 'submitted' && (
-                  <div className="mt-8 pt-8 border-t border-slate-100 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4">The Complete Solution</span>
-                    <div className="flex flex-wrap gap-3">
+                  <div className="mt-4 pt-4 border-t border-slate-100 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">The Complete Solution</span>
+                    <div className="flex flex-wrap gap-2">
                       {(question.payload as FillPayload).blanks.map((b, i) => (
-                        <div key={i} className="flex items-center gap-3 px-4 py-2 bg-emerald-50/50 border border-emerald-100 rounded-2xl">
-                          <span className="text-[10px] font-black text-emerald-600 bg-emerald-100 w-6 h-6 flex items-center justify-center rounded-lg">{i + 1}</span>
-                          <span className="text-sm font-bold text-emerald-800 font-mono tracking-tight">{b.answer}</span>
+                        <div key={i} className="flex items-center gap-2 px-3 py-1 bg-emerald-50/50 border border-emerald-100 rounded-xl">
+                          <span className="text-[10px] font-black text-emerald-600 bg-emerald-100 w-5 h-5 flex items-center justify-center rounded-lg">{i + 1}</span>
+                          <span className="text-xs font-bold text-emerald-800 font-mono tracking-tight">{b.answer}</span>
                         </div>
                       ))}
                     </div>
