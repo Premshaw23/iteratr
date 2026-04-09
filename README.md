@@ -12,6 +12,7 @@
 ## Table of Contents
 
 - [Overview](#overview)
+- [Designs & Flows](#designs--flows)
 - [Architecture](#architecture)
 - [Features](#features)
 - [Tech Stack](#tech-stack)
@@ -33,6 +34,16 @@
 **iteratr** is a full-stack adaptive learning platform that uses Google Gemini AI to generate ELO-rated coding questions across four types (MCQ, Fill-in-Blank, Drag-to-Order, Code), evaluate answers with a Socratic hint engine, and conduct live AI mock interviews with a real-time WebSocket server.
 
 Users progress through a **streak + ELO rating system** — every answer updates their rating which feeds back into question difficulty selection, creating a true adaptive learning loop.
+
+---
+
+## Designs & Flows
+
+Explore our UI/UX design and application flows directly on Figma. GitHub markdown does not support interactive iframes, so standard links are provided below. For interactive embedded views, see [`docs/designs.md`](docs/designs.md).
+
+- 🎨 **[Full Design System & Screens](https://www.figma.com/design/AQuVeCOVMaNN29R54hR1wc/iteratr-%E2%80%94-Full-Design-System--Screens---DSPCs-?node-id=0-1&t=FJyxMHtrWmIaSoPo-1)**
+- 🔄 **[Data Flow Per Screen](https://www.figma.com/board/im8wNHBHi874aOTthMT0Dx/iteratr-data-flow-per-screen?node-id=0-1&t=4HsH5v9Tt9DCCnbu-1)**
+- 🧭 **[Navigation Flow](https://www.figma.com/board/nkUFgsRAZh5GtfnpwMsA11/iteratr-navigation-flow?node-id=0-1&t=RncgIMsyJfsMiZrG-1)**
 
 ---
 
