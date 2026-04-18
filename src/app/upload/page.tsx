@@ -268,7 +268,7 @@ export default function UploadPage() {
                   placeholder="Paste your notes, code, or study material here..."
                   disabled={uploading}
                   rows={8}
-                  className="w-full border border-border rounded-lg px-3 py-2.5 text-sm text-dark bg-white resize-none focus:outline-none focus:border-brand placeholder:text-muted font-mono text-xs disabled:opacity-50"
+                  className="w-full border border-border rounded-lg px-3 py-2.5 text-sm text-dark bg-white resize-none focus:outline-none focus:border-brand placeholder:text-muted font-mono disabled:opacity-50"
                 />
               </div>
 
