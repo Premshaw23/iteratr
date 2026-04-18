@@ -3,6 +3,8 @@
 import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, Suspense, useEffect } from 'react'
+import Button from '@/components/Button'
+import FormGroup from '@/components/FormGroup'
 
 const TOPICS = [
   { id: 'arrays',             label: 'Arrays'           },
@@ -38,7 +40,7 @@ const TIMERS = [
 export default function SessionNewPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-surface flex items-center justify-center p-6 text-sm text-mid">
+      <div className="min-h-screen bg-white flex items-center justify-center p-6 text-sm text-slate-600">
         Loading configurator...
       </div>
     }>
@@ -70,17 +72,17 @@ function SessionNewContent() {
   useEffect(() => {
     const weakTopicsStr = params.get('topics')
     const subTopicsStr = params.get('subtopics')
-    
+
     if (mode === 'weak_zones' && weakTopicsStr && !customPrompt) {
       const topicArray = weakTopicsStr.split(',').filter(Boolean)
       setTopics(topicArray.length > 0 ? topicArray : [defaultTopic])
       setDifficulty('easy')
       setStyle('strict')
-      
-      const displaySubtopics = subTopicsStr 
+
+      const displaySubtopics = subTopicsStr
         ? subTopicsStr.split(',').map((t, i) => `${i + 1}. ${t.replace(/\+/g, ' ')}`).join('\n')
         : topicArray.map((t, i) => `${i + 1}. ${t.replace(/_/g, ' ')}`).join('\n')
-      
+
       setCustomPrompt(`Generate a weak-zone recovery session with focus on these specific weak areas:
 ${displaySubtopics}
 
@@ -98,7 +100,7 @@ Instructions:
   // Fetch weak zones to show in the mode button
   useEffect(() => {
     if (!session) return
-    fetch('/api/user/stats') // I need to create this simple list API
+    fetch('/api/user/stats')
       .then(res => res.json())
       .then(data => {
         const wz = data.filter((s: any) => s.is_weak_zone).length
@@ -156,184 +158,174 @@ Instructions:
   }
 
   return (
-    <div className="min-h-screen bg-surface flex items-center justify-center px-4 py-10">
-      <div className="w-full max-w-xl">
+    <div className="min-h-screen bg-white flex items-center justify-center px-4 py-10">
+      <div className="w-full max-w-2xl">
 
         {/* Header */}
-        <div className="mb-8">
-          <button onClick={() => router.push('/dashboard')} className="text-sm text-muted hover:text-dark mb-4 flex items-center gap-1">
-            ← Dashboard
+        <div className="mb-10">
+          <button
+            onClick={() => router.push('/dashboard')}
+            className="text-sm text-slate-600 hover:text-slate-900 mb-6 flex items-center gap-1 font-medium transition"
+          >
+            ← Back to Dashboard
           </button>
-          <h1 className="text-2xl font-bold text-dark">Configure your session</h1>
-          <p className="text-sm text-mid mt-1">Set the rules before you start.</p>
+          <h1 className="text-4xl font-bold text-slate-900 mb-2">Practice Session</h1>
+          <p className="text-base text-slate-600">Configure your session and get started.</p>
         </div>
 
         {/* Card */}
-        <div className="bg-white border border-border rounded-2xl p-6 space-y-6">
+        <div className="card shadow-lg p-8 space-y-8">
 
           {/* Topics */}
-          <div>
-            <label className="text-xs font-semibold text-muted uppercase tracking-wider mb-3 block">
-              Topic
-            </label>
-            <div className="flex flex-wrap gap-2">
+          <FormGroup label="Technical Topics">
+            <div className="flex flex-wrap gap-3">
               {TOPICS.map(t => (
                 <button
                   key={t.id}
                   onClick={() => toggleTopic(t.id)}
-                  className={`text-sm px-4 py-1.5 rounded-full border transition font-medium ${
+                  className={`text-sm px-4 py-2 rounded-lg border font-medium transition ${
                     selectedTopics.includes(t.id)
-                      ? 'bg-brand text-white border-brand'
-                      : 'border-border text-mid hover:border-brand hover:text-brand'
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-md'
+                      : 'border-slate-300 text-slate-700 hover:border-blue-500 hover:text-blue-600 bg-white'
                   }`}
                 >
                   {t.label}
                 </button>
               ))}
             </div>
-          </div>
+          </FormGroup>
 
           {/* Difficulty */}
-          <div>
-            <label className="text-xs font-semibold text-muted uppercase tracking-wider mb-3 block">
-              Difficulty
-            </label>
-            <div className="grid grid-cols-2 gap-2">
+          <FormGroup label="Difficulty Level">
+            <div className="grid grid-cols-2 gap-3">
               {DIFFICULTIES.map(d => (
                 <button
                   key={d.id}
                   onClick={() => setDifficulty(d.id)}
-                  className={`text-left p-3 rounded-xl border transition ${
+                  className={`text-left p-4 rounded-lg border transition ${
                     difficulty === d.id
-                      ? 'border-brand bg-brand-light'
-                      : 'border-border hover:border-brand'
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-slate-200 hover:border-blue-300 bg-white'
                   }`}
                 >
-                  <p className={`text-sm font-medium ${difficulty === d.id ? 'text-brand' : 'text-dark'}`}>
+                  <p className={`text-sm font-bold ${difficulty === d.id ? 'text-blue-600' : 'text-slate-900'}`}>
                     {d.label}
                   </p>
-                  <p className="text-xs text-muted mt-0.5">{d.desc}</p>
+                  <p className="text-xs text-slate-600 font-medium mt-1">{d.desc}</p>
                 </button>
               ))}
             </div>
-          </div>
+          </FormGroup>
 
-          {/* Language + Style in row */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-semibold text-muted uppercase tracking-wider mb-2 block">
-                Language
-              </label>
+          {/* Language + Style */}
+          <div className="grid grid-cols-2 gap-6">
+            <FormGroup label="Programming Language">
               <select
                 value={language}
                 onChange={e => setLanguage(e.target.value)}
-                className="w-full border border-border rounded-xl px-3 py-2 text-sm text-dark bg-white focus:outline-none focus:border-brand"
+                className="input"
               >
                 <option value="python">Python 3.11</option>
                 <option value="cpp">C++ 17</option>
                 <option value="javascript">JavaScript</option>
               </select>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-muted uppercase tracking-wider mb-2 block">
-                Interviewer style
-              </label>
+            </FormGroup>
+
+            <FormGroup label="Mentor Style">
               <select
                 value={style}
                 onChange={e => setStyle(e.target.value)}
-                className="w-full border border-border rounded-xl px-3 py-2 text-sm text-dark bg-white focus:outline-none focus:border-brand"
+                className="input"
               >
                 {STYLES.map(s => (
                   <option key={s.id} value={s.id}>{s.label}</option>
                 ))}
               </select>
-            </div>
+            </FormGroup>
           </div>
 
           {/* Timer */}
-          <div>
-            <label className="text-xs font-semibold text-muted uppercase tracking-wider mb-3 block">
-              Time pressure
-            </label>
-            <div className="flex gap-2">
+          <FormGroup label="Time Pressure">
+            <div className="grid grid-cols-3 gap-3">
               {TIMERS.map(t => (
                 <button
                   key={t.id}
                   onClick={() => setTimer(t.id)}
-                  className={`flex-1 text-sm py-2 px-3 rounded-xl border transition font-medium ${
+                  className={`text-sm py-2.5 px-3 rounded-lg border font-medium transition ${
                     timer === t.id
-                      ? 'border-brand bg-brand-light text-brand'
-                      : 'border-border text-mid hover:border-brand'
+                      ? 'border-blue-600 bg-blue-50 text-blue-600'
+                      : 'border-slate-300 text-slate-700 hover:border-blue-400 bg-white'
                   }`}
                 >
                   {t.label}
                 </button>
               ))}
             </div>
-          </div>
+          </FormGroup>
 
           {/* Custom prompt */}
-          <div>
-            <label className="text-xs font-semibold text-muted uppercase tracking-wider mb-2 block">
-              Custom prompt <span className="font-normal text-muted">(optional)</span>
-            </label>
+          <FormGroup label="Custom Prompt (Optional)" hint="Add specific instructions for your session">
             <textarea
               value={customPrompt}
               onChange={e => setCustomPrompt(e.target.value)}
               placeholder='e.g. "I have a Google interview in 2 days. Be brutally honest, no hints unless I ask."'
-              rows={2}
-              className="w-full border border-border rounded-xl px-3 py-2.5 text-sm text-dark bg-white resize-none focus:outline-none focus:border-brand placeholder:text-muted"
+              rows={3}
+              className="input resize-none"
             />
-          </div>
+          </FormGroup>
 
           {/* Session mode toggle */}
-          <div>
-            <label className="text-xs font-semibold text-muted uppercase tracking-wider mb-3 block">
-              Session Mode
-            </label>
-            <div className="flex gap-2">
+          <FormGroup label="Session Mode">
+            <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={() => setMode('balanced')}
-                className={`flex-1 text-sm py-2 px-3 rounded-xl border transition font-medium ${
+                className={`text-sm py-3 px-4 rounded-lg border font-medium transition ${
                   mode === 'balanced'
-                    ? 'border-brand bg-brand-light text-brand'
-                    : 'border-border text-mid hover:border-brand'
+                    ? 'border-blue-600 bg-blue-50 text-blue-600'
+                    : 'border-slate-300 text-slate-700 hover:border-blue-400 bg-white'
                 }`}
               >
-                Balanced
+                Balanced Session
               </button>
               <button
                 onClick={() => setMode('weak_zones')}
                 disabled={weakZonesCount === 0}
-                className={`flex-1 text-sm py-2 px-3 rounded-xl border transition font-medium ${
+                className={`text-sm py-3 px-4 rounded-lg border font-medium transition ${
                   mode === 'weak_zones'
-                    ? 'border-red-400 bg-red-50 text-red-700'
-                    : 'border-border text-mid hover:border-red-400'
-                } disabled:opacity-40`}
+                    ? 'border-red-500 bg-red-50 text-red-600'
+                    : 'border-slate-300 text-slate-700 hover:border-red-400 bg-white disabled:opacity-50 disabled:cursor-not-allowed'
+                }`}
               >
-                Weak Zone Recovery 💉 {weakZonesCount > 0 ? `(${weakZonesCount})` : ''}
+                Weak Zone Recovery {weakZonesCount > 0 ? `(${weakZonesCount})` : ''}
               </button>
             </div>
-          </div>
+          </FormGroup>
 
           {/* Session preview */}
-          <div className="bg-surface rounded-xl px-4 py-3 text-sm text-mid">
-            <span className="font-semibold text-dark">Session: </span>
-            {selectedTopics.length === 0 ? 'Select at least one topic' : (
-              <>
-                {selectedTopics.join(', ')} · {difficulty} difficulty · {style} style · {language} · {mode === 'weak_zones' ? 3 : mode === 'daily' ? 1 : 5} questions
-              </>
-            )}
+          <div className="bg-slate-50 rounded-lg px-4 py-3 text-sm border border-slate-200">
+            <span className="font-bold text-slate-900">Session: </span>
+            <span className="text-slate-700">
+              {selectedTopics.length === 0 ? (
+                <span className="text-slate-500">Select at least one topic</span>
+              ) : (
+                <>
+                  {selectedTopics.join(', ')} · {difficulty} difficulty · {style} style · {language} · {mode === 'weak_zones' ? 3 : mode === 'daily' ? 1 : 5} questions
+                </>
+              )}
+            </span>
           </div>
 
           {/* Start button */}
-          <button
+          <Button
             onClick={handleStart}
             disabled={starting || selectedTopics.length === 0}
-            className="w-full bg-brand text-white font-semibold py-3 rounded-xl hover:bg-brand-dark transition disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+            isLoading={starting}
+            variant="primary"
+            size="lg"
+            className="w-full"
           >
-            {starting ? 'Generating question...' : 'Start session →'}
-          </button>
+            {starting ? 'Generating question...' : 'Start Session'}
+          </Button>
 
         </div>
       </div>

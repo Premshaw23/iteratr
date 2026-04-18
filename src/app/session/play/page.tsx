@@ -106,8 +106,9 @@ export default function PlayPage() {
   const handleRunCode = () => {
     if (!isCode || !userCode.trim() || running || submitting) return
     setRunning(true)
-    setFeedback('Running hidden tests on Judge0...')
+    setFeedback('Running hidden tests on Judge0... (This may take up to 15 seconds)')
 
+    const startTime = Date.now()
     fetch('/api/code/run', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -117,12 +118,15 @@ export default function PlayPage() {
       }),
     })
       .then(async (res) => {
+        const elapsed = Date.now() - startTime
         const data = await res.json().catch(() => null)
         if (!res.ok) {
-          const msg =
-            data?.code === 'JUDGE0_NOT_CONFIGURED'
-              ? 'Judge0 is not configured on this environment.'
-              : data?.error || 'Judge0 execution failed.'
+          let msg = data?.error || 'Judge0 execution failed.'
+          if (data?.code === 'JUDGE0_NOT_CONFIGURED') {
+            msg = 'Judge0 is not configured on this environment.'
+          } else if (elapsed > 13000) {
+            msg = `${msg} (The public Judge0 API might be overloaded. Try again in a moment, or consider using a paid Judge0 tier for faster execution.)`
+          }
           setFeedback(msg)
           return
         }
@@ -133,7 +137,7 @@ export default function PlayPage() {
           const statusText = firstFailed.status !== 'Accepted' ? ` (Error: ${firstFailed.status})` : ''
           const errorMsg = firstFailed.compile_output || firstFailed.stderr || ''
           const displayOutput = firstFailed.actual_output || (errorMsg ? 'Check your code for compilation or runtime errors.' : 'No output produced.')
-          
+
           setFeedback(
             `${summary}${statusText} First failing case: ${firstFailed.description}. Expected "${firstFailed.expected_output}", got "${displayOutput}"${errorMsg ? `\n\nDEBUG INFO:\n${errorMsg.slice(0, 500)}` : ''}`
           )
@@ -142,7 +146,7 @@ export default function PlayPage() {
         }
       })
       .catch(() => {
-        setFeedback('Judge0 request failed. Check network/config and try again.')
+        setFeedback('Judge0 request failed. The public API may be temporarily unavailable. Please try again.')
       })
       .finally(() => {
         setRunning(false)
@@ -221,23 +225,23 @@ export default function PlayPage() {
   }
 
   const handleEditorWillMount = (monaco: any) => {
-    monaco.editor.defineTheme('iteratr-dark', {
-      base: 'vs-dark',
+    monaco.editor.defineTheme('iteratr-light', {
+      base: 'vs',
       inherit: true,
       rules: [
-        { token: 'comment', foreground: '6272a4', fontStyle: 'italic' },
-        { token: 'keyword', foreground: 'ff79c6', fontStyle: 'bold' },
-        { token: 'number', foreground: 'bd93f9' },
-        { token: 'string', foreground: 'f1fa8c' },
-        { token: 'operators', foreground: '50fa7b' }
+        { token: 'comment', foreground: '908090', fontStyle: 'italic' },
+        { token: 'keyword', foreground: '0969da', fontStyle: 'bold' },
+        { token: 'number', foreground: '6f42c1' },
+        { token: 'string', foreground: '22863a' },
+        { token: 'operators', foreground: 'd73a49' }
       ],
       colors: {
-        'editor.background': '#020617', // Match slate-950
-        'editor.foreground': '#f8f8f2',
-        'editorLineNumber.foreground': '#44475a',
-        'editor.selectionBackground': '#44475a',
-        'editor.lineHighlightBackground': '#1e293b', // Match slate-900ish
-        'editorCursor.foreground': '#2D4EF5', // Match brand
+        'editor.background': '#ffffff',
+        'editor.foreground': '#0f172a',
+        'editorLineNumber.foreground': '#8c959f',
+        'editor.selectionBackground': '#ddf4ff',
+        'editor.lineHighlightBackground': '#f6f8fa',
+        'editorCursor.foreground': '#3b82f6',
       }
     })
   }
@@ -455,80 +459,85 @@ export default function PlayPage() {
 
         <main className={`flex-1 flex overflow-hidden ${isResizing ? 'select-none cursor-col-resize' : ''}`}>
           {/* Left Panel: Problem */}
-          <div 
-            className="border-r border-border bg-white overflow-y-auto p-8 custom-scrollbar relative"
+          <div
+            className="border-r border-border bg-white overflow-y-auto custom-scrollbar relative flex flex-col"
             style={{ width: `${leftWidth}%` }}
           >
-            <h1 className="text-2xl font-bold text-dark mb-4">{question.subtopic}</h1>
-            <div className="prose prose-slate max-w-none mb-8 
-              prose-p:text-[15px] prose-p:leading-relaxed prose-p:text-dark/90
-              prose-h2:text-xl prose-h2:font-black prose-h2:tracking-tight prose-h2:mt-8 prose-h2:mb-4 prose-h2:text-dark
-              prose-code:bg-slate-100 prose-code:text-brand-dark prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:font-bold prose-code:before:content-none prose-code:after:content-none
-              prose-strong:text-dark prose-strong:font-black
-              prose-pre:bg-zinc-950 prose-pre:border prose-pre:border-white/10 prose-pre:rounded-2xl prose-pre:p-4
-              prose-blockquote:border-l-4 prose-blockquote:border-brand prose-blockquote:bg-brand-light/30 prose-blockquote:py-1 prose-blockquote:px-4 prose-blockquote:rounded-r-xl prose-blockquote:italic prose-blockquote:text-mid
-            ">
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm, remarkMath]}
-                rehypePlugins={[rehypeKatex]}
-              >
-                {question.problem_statement}
-              </ReactMarkdown>
-            </div>
+            <div className="flex-1 overflow-y-auto p-8 space-y-6">
+              <div>
+                <h1 className="text-2xl font-bold text-dark mb-2">{question.subtopic}</h1>
+                <p className="text-sm text-muted font-medium">Problem #{config.question_number}</p>
+              </div>
 
-            {/* Hint & Feedback Section */}
-            {(hint || feedback) && (
-              <div className="space-y-4">
-                {hint && (
-                  <div className="bg-amber-50/50 border border-amber-200 rounded-2xl p-5">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="flex items-center gap-2 text-xs font-bold text-amber-700 uppercase tracking-widest">
-                        <Lightbulb className="w-3.5 h-3.5" />
-                        Socratic Hint — L{hintLevel}
-                      </span>
+              <div className="prose prose-slate max-w-none
+                prose-p:text-[15px] prose-p:leading-relaxed prose-p:text-dark/85
+                prose-h2:text-lg prose-h2:font-bold prose-h2:tracking-normal prose-h2:mt-6 prose-h2:mb-3 prose-h2:text-dark
+                prose-h3:text-base prose-h3:font-bold prose-h3:mt-4 prose-h3:mb-2 prose-h3:text-dark
+                prose-code:bg-slate-100 prose-code:text-brand-dark prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:font-semibold prose-code:before:content-none prose-code:after:content-none
+                prose-strong:text-dark prose-strong:font-bold
+                prose-pre:bg-slate-900 prose-pre:border prose-pre:border-slate-700 prose-pre:rounded-lg prose-pre:p-4 prose-pre:text-sm
+                prose-blockquote:border-l-4 prose-blockquote:border-brand prose-blockquote:bg-brand/5 prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:rounded-r-lg prose-blockquote:italic prose-blockquote:text-mid prose-blockquote:my-4
+              ">
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm, remarkMath]}
+                  rehypePlugins={[rehypeKatex]}
+                >
+                  {question.problem_statement}
+                </ReactMarkdown>
+              </div>
+
+              {/* Hint & Feedback Section */}
+              {(hint || feedback) && (
+                <div className="space-y-4 pt-4 border-t border-border">
+                  {hint && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-2.5">
+                        <Lightbulb className="w-4 h-4 text-amber-600" />
+                        <span className="text-xs font-bold text-amber-700 uppercase tracking-wide">Hint • Level {hintLevel}</span>
+                      </div>
+                      <p className="text-sm text-amber-900 leading-relaxed font-medium">{hint}</p>
                     </div>
-                    <p className="text-[14px] text-amber-900 leading-relaxed font-medium">{hint}</p>
-                  </div>
-                )}
-                {feedback && (
-                  <div className={`border rounded-2xl p-6 transition-all duration-300 ${
-                    isCorrect === true ? 'bg-emerald-50/50 border-emerald-200 shadow-sm shadow-emerald-100/20'
-                    : isCorrect === false ? 'bg-rose-50/50 border-rose-200 shadow-sm shadow-rose-100/20'
-                    : 'bg-indigo-50/50 border-indigo-200 shadow-sm shadow-indigo-100/20'
-                  }`}>
-                    <div className="flex items-center justify-between mb-3">
-                      <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${
-                        isCorrect === true ? 'text-emerald-700'
-                        : isCorrect === false ? 'text-rose-700'
-                        : 'text-indigo-700'
-                      }`}>
-                        {isCorrect === true ? 'Judgment: Logic Verified' 
-                          : isCorrect === false ? 'Judgment: Logic Failure' 
-                          : 'Local Environment: Simulation'}
-                      </p>
-                      {isCorrect === null && running && (
-                        <div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+                  )}
+                  {feedback && (
+                    <div className={`border rounded-lg p-4 transition-all duration-300 ${
+                      isCorrect === true ? 'bg-emerald-50 border-emerald-200'
+                      : isCorrect === false ? 'bg-red-50 border-red-200'
+                      : 'bg-blue-50 border-blue-200'
+                    }`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <p className={`text-xs font-bold uppercase tracking-wide ${
+                          isCorrect === true ? 'text-emerald-700'
+                          : isCorrect === false ? 'text-red-700'
+                          : 'text-blue-700'
+                        }`}>
+                          {isCorrect === true ? '✓ Correct'
+                            : isCorrect === false ? '✗ Incorrect'
+                            : 'Local Test Results'}
+                        </p>
+                        {isCorrect === null && running && (
+                          <div className="w-3.5 h-3.5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                        )}
+                      </div>
+                      <p className={`text-sm leading-relaxed font-medium whitespace-pre-wrap ${
+                        isCorrect === true ? 'text-emerald-900'
+                        : isCorrect === false ? 'text-red-900'
+                        : 'text-blue-900'
+                      }`}>{feedback}</p>
+
+                      {isCorrect === null && !running && feedback.includes("Proceed") && (
+                        <div className="mt-3 pt-3 border-t border-blue-100 flex items-center gap-2">
+                          <div className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                          <span className="text-xs font-semibold text-blue-700 uppercase tracking-wide">Compiler check: Complete</span>
+                        </div>
                       )}
                     </div>
-                    <p className={`text-[14px] leading-relaxed font-medium ${
-                      isCorrect === true ? 'text-emerald-950'
-                      : isCorrect === false ? 'text-rose-950'
-                      : 'text-indigo-950'
-                    }`}>{feedback}</p>
-                    
-                    {isCorrect === null && !running && feedback.includes("Proceed") && (
-                      <div className="mt-4 pt-4 border-t border-indigo-100 flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-600" />
-                        <span className="text-[10px] font-black text-indigo-700 uppercase tracking-widest">Compiler sanity check: Complete</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
-          <div className="flex-1 flex flex-col bg-[#1e1e1e] relative">
+          <div className="flex-1 flex flex-col bg-white relative">
             {/* Draggable Divider */}
             <div
               onMouseDown={startResizing}
@@ -539,11 +548,11 @@ export default function PlayPage() {
               </div>
             </div>
             {/* Editor Toolbar */}
-            <div className="h-11 bg-[#252525] border-b border-[#333] flex items-center justify-between px-4 shrink-0">
+            <div className="h-11 bg-white border-b border-border flex items-center justify-between px-4 shrink-0">
                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2 px-3 py-1 bg-[#2d2d2d] rounded-md border border-[#3d3d3d]">
-                    <Code2 className="w-3.5 h-3.5 text-blue-400" />
-                    <span className="text-[11px] font-mono text-zinc-400 uppercase tracking-widest">{payload.language}</span>
+                  <div className="flex items-center gap-2 px-3 py-1 bg-slate-100 rounded-md border border-border">
+                    <Code2 className="w-3.5 h-3.5 text-brand" />
+                    <span className="text-[11px] font-mono text-mid uppercase tracking-widest">{payload.language}</span>
                   </div>
                </div>
                <div className="flex items-center gap-2">
@@ -552,7 +561,7 @@ export default function PlayPage() {
                       <button
                         onClick={handleHint}
                         disabled={hintLevel >= 4 || loadingHint}
-                        className="flex items-center gap-2 px-4 py-1.5 text-xs font-bold text-amber-200 hover:bg-amber-400/10 rounded-lg transition disabled:opacity-30"
+                        className="flex items-center gap-2 px-4 py-1.5 text-xs font-bold text-amber-600 hover:bg-amber-100 rounded-lg transition disabled:opacity-30"
                       >
                         {loadingHint ? '...' : (
                           <>
@@ -564,7 +573,7 @@ export default function PlayPage() {
                       <button
                         onClick={handleRunCode}
                         disabled={running || submitting}
-                        className="flex items-center gap-2 px-4 py-1.5 text-xs font-bold text-slate-400 hover:text-white bg-slate-800/50 hover:bg-slate-700/50 border border-white/5 rounded-lg transition disabled:opacity-40"
+                        className="flex items-center gap-2 px-4 py-1.5 text-xs font-bold text-mid hover:text-dark bg-slate-100 hover:bg-slate-200 border border-border rounded-lg transition disabled:opacity-40"
                       >
                         {running ? 'Running...' : 'Run Code'}
                       </button>
@@ -597,7 +606,7 @@ export default function PlayPage() {
             <div className="flex-1 overflow-hidden relative">
               <Editor
                 height="100%"
-                theme="iteratr-dark"
+                theme="iteratr-light"
                 language={monacoLang}
                 value={userCode}
                 onChange={(val) => setUserCode(val || '')}
@@ -619,10 +628,10 @@ export default function PlayPage() {
                 }}
               />
               {submitting && (
-                <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px] flex items-center justify-center z-10">
-                   <div className="bg-zinc-900 border border-zinc-800 px-6 py-3 rounded-full flex items-center gap-3">
+                <div className="absolute inset-0 bg-white/40 backdrop-blur-[1px] flex items-center justify-center z-10">
+                   <div className="bg-white border border-border px-6 py-3 rounded-full flex items-center gap-3 shadow-lg">
                       <div className="w-4 h-4 border-2 border-brand border-t-transparent rounded-full animate-spin" />
-                      <span className="text-xs font-bold text-white tracking-widest uppercase">Executing on Judge0...</span>
+                      <span className="text-xs font-bold text-dark tracking-widest uppercase">Executing on Judge0...</span>
                    </div>
                 </div>
               )}
@@ -810,64 +819,62 @@ export default function PlayPage() {
         </div>
 
         {/* Global Feedback & Action Container (Pinned to bottom or flowing) */}
-        <div className="mt-10 space-y-6 pb-20">
-          
+        <div className="mt-8 space-y-5 pb-20">
+
           {/* Status Message */}
           <div className="flex flex-col gap-4">
             {hint && (
-              <div className="bg-amber-50 border border-amber-200/60 rounded-[24px] p-6 shadow-sm animate-in zoom-in-95 duration-300">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600">
-                      <Lightbulb size={18} />
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-5 shadow-sm animate-in zoom-in-95 duration-300">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600">
+                      <Lightbulb size={16} />
                     </div>
-                    <span className="text-xs font-black text-amber-700 uppercase tracking-widest">
-                      AI Mentor Hint · L{hintLevel}
-                    </span>
+                    <span className="text-xs font-bold text-amber-700 uppercase tracking-wide">Hint • Level {hintLevel}</span>
                   </div>
-                  <div className="flex gap-1.5">
+                  <div className="flex gap-1">
                     {[1,2,3,4].map(l => (
-                      <div key={l} className={`w-6 h-1 rounded-full transition-all duration-500 ${l <= hintLevel ? 'bg-amber-500' : 'bg-amber-200'}`} />
+                      <div key={l} className={`w-5 h-0.5 rounded-full transition-all duration-500 ${l <= hintLevel ? 'bg-amber-500' : 'bg-amber-200'}`} />
                     ))}
                   </div>
                 </div>
-                <p className="text-[15px] font-medium text-amber-950 leading-relaxed italic pr-4">
-                  &quot;{hint}&quot;
+                <p className="text-sm text-amber-900 leading-relaxed font-medium">
+                  {hint}
                 </p>
               </div>
             )}
 
             {feedback && phase === 'submitted' && (
-              <div className={`rounded-[24px] overflow-hidden border shadow-xl animate-in slide-in-from-top-4 duration-500 ${
-                isCorrect ? 'bg-emerald-50 border-emerald-200 shadow-emerald-100/50' : 'bg-rose-50 border-rose-200 shadow-rose-100/50'
+              <div className={`rounded-lg overflow-hidden border shadow-md animate-in slide-in-from-top-4 duration-500 ${
+                isCorrect ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'
               }`}>
-                <div className="p-6">
-                  <div className="flex items-center justify-between mb-4">
+                <div className="p-5">
+                  <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
                       {isCorrect ? (
-                        <CheckCircle2 className="text-emerald-500" size={24} />
+                        <CheckCircle2 className="text-emerald-500 flex-shrink-0" size={20} />
                       ) : (
-                        <XCircle className="text-rose-500" size={24} />
+                        <XCircle className="text-red-500 flex-shrink-0" size={20} />
                       )}
-                      <span className={`text-[12px] font-black uppercase tracking-widest ${isCorrect ? 'text-emerald-700' : 'text-rose-700'}`}>
-                        {isCorrect ? 'Solution Verified' : 'Conceptual Misalignment'}
+                      <span className={`text-xs font-bold uppercase tracking-wide ${isCorrect ? 'text-emerald-700' : 'text-red-700'}`}>
+                        {isCorrect ? 'Correct' : 'Incorrect'}
                       </span>
                     </div>
                     {eloChange !== null && (
-                      <div className={`px-4 py-2 rounded-xl text-sm font-black shadow-sm ${
-                        eloChange >= 0 ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'
+                      <div className={`px-3 py-1 rounded-lg text-xs font-bold shadow-sm flex-shrink-0 ${
+                        eloChange >= 0 ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'
                       }`}>
-                        {eloChange >= 0 ? '▲' : '▼'}{Math.abs(eloChange)} Elo
+                        {eloChange >= 0 ? '▲' : '▼'}{Math.abs(eloChange)}
                       </div>
                     )}
                   </div>
-                  <p className="text-[15px] font-medium leading-relaxed text-slate-800 pr-12">
+                  <p className="text-sm leading-relaxed font-medium text-slate-900 mb-3 whitespace-pre-wrap">
                     {feedback}
                   </p>
                   {eloAfter !== null && (
-                    <div className="mt-4 pt-4 border-t border-slate-200/20 flex items-center justify-between">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Global Technical Rating</span>
-                      <span className="text-xs font-black text-slate-600">NEW ELO: {eloAfter}</span>
+                    <div className="pt-3 border-t border-slate-200 flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">New Rating</span>
+                      <span className="text-xs font-bold text-slate-700">{eloAfter}</span>
                     </div>
                   )}
                 </div>
@@ -876,35 +883,35 @@ export default function PlayPage() {
           </div>
 
           {/* Action Footer */}
-          <div className="flex gap-4 sticky bottom-8 p-3 bg-white/50 backdrop-blur-xl border border-white rounded-[28px] shadow-2xl">
+          <div className="flex gap-3 sticky bottom-8 p-3 bg-white/60 backdrop-blur-md border border-slate-200/50 rounded-xl shadow-lg">
             {phase === 'answering' && (
               <>
                 <button
                   onClick={handleHint}
                   disabled={hintLevel >= 4 || loadingHint}
-                  className="px-8 py-4 bg-white border border-slate-200 rounded-[20px] text-sm font-black text-slate-500 hover:text-brand hover:border-brand/40 hover:bg-brand/5 transition-all flex items-center gap-3 disabled:opacity-40 shadow-sm grow-0 shrink-0"
+                  className="px-6 py-3 bg-white border border-amber-200 rounded-lg text-xs font-bold text-amber-700 hover:bg-amber-50 hover:border-amber-300 transition-all flex items-center gap-2 disabled:opacity-40 shadow-sm"
                 >
-                  <Lightbulb size={18} className={loadingHint ? 'animate-pulse' : ''} />
-                  {loadingHint ? 'REASONING...' : hintLevel === 0 ? 'GET HINT' : `HINT ${hintLevel + 1}`}
+                  <Lightbulb size={16} className={loadingHint ? 'animate-pulse' : ''} />
+                  {loadingHint ? 'Thinking...' : hintLevel === 0 ? 'Get Hint' : `Hint ${hintLevel + 1}`}
                 </button>
                 <button
                   onClick={handleSubmit}
                   disabled={
-                    (isMCQ ? selected === null : 
-                     isFill ? !(fillAnswers.length > 0 && fillAnswers.every(a => a?.trim() !== '')) : 
+                    (isMCQ ? selected === null :
+                     isFill ? !(fillAnswers.length > 0 && fillAnswers.every(a => a?.trim() !== '')) :
                      false) || submitting
                   }
-                  className="flex-1 bg-brand text-white font-bold px-10 py-4 rounded-[20px] hover:bg-brand-dark transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-brand/30 hover:shadow-brand/40 active:scale-[0.98] flex items-center justify-center gap-3 text-base"
+                  className="flex-1 bg-brand text-white font-bold px-8 py-3 rounded-lg hover:bg-blue-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg active:scale-[0.98] flex items-center justify-center gap-2 text-sm"
                 >
                   {submitting ? (
-                    <div className="flex items-center gap-3">
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      <span className="tracking-widest uppercase text-xs">Verifying Logic...</span>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span className="uppercase text-xs font-semibold">Verifying...</span>
                     </div>
                   ) : (
                     <>
-                      <Send size={18} />
-                      SUBMIT SOLUTION
+                      <Send size={16} />
+                      Submit
                     </>
                   )}
                 </button>
@@ -915,19 +922,19 @@ export default function PlayPage() {
               <button
                 onClick={handleNext}
                 disabled={phase === 'loading_next'}
-                className="flex-1 bg-brand text-white font-black py-5 rounded-[22px] hover:bg-brand-dark transition-all duration-500 shadow-2xl shadow-brand/40 flex items-center justify-center gap-3 active:scale-[0.98] animate-in slide-in-from-bottom-4"
+                className="flex-1 bg-brand text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition-all duration-200 shadow-md hover:shadow-lg flex items-center justify-center gap-2 active:scale-[0.98] animate-in slide-in-from-bottom-4"
               >
                 {phase === 'loading_next' ? (
-                   <div className="flex items-center gap-3">
-                     <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                     <span className="tracking-widest uppercase text-xs">Generating Neural Path...</span>
+                   <div className="flex items-center gap-2">
+                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                     <span className="uppercase text-xs font-semibold">Generating...</span>
                    </div>
                 ) : (
                   <>
-                    <span className="tracking-tight text-lg">
-                      {config.question_number >= config.total_questions ? 'FINISH & VIEW DASHBOARD' : 'NEXT CHALLENGE'}
+                    <span className="text-sm font-bold">
+                      {config.question_number >= config.total_questions ? 'Finish Session' : 'Next Challenge'}
                     </span>
-                    <ChevronRight size={20} className="stroke-[3]" />
+                    <ChevronRight size={16} />
                   </>
                 )}
               </button>
