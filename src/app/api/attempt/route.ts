@@ -52,8 +52,12 @@ export async function POST(req: NextRequest) {
 
     if (question.type === 'mcq') {
       const payload = question.payload as MCQPayload
-      const chosenIndex   = parseInt(submitted_answer)
+      const chosenIndex   = parseInt(submitted_answer, 10)
       const correctIndex  = payload.correct_index
+
+      if (isNaN(chosenIndex) || chosenIndex < 0 || chosenIndex >= payload.options.length) {
+        return NextResponse.json({ error: 'Invalid MCQ answer index' }, { status: 400 })
+      }
 
       isCorrect = chosenIndex === correctIndex
 
@@ -67,7 +71,12 @@ export async function POST(req: NextRequest) {
       ).catch(() => "Feedback generation failed. Check your answer above.") // Fallback
     } else if (question.type === 'fill') {
       const payload = question.payload as any
-      const submittedAnswers = JSON.parse(submitted_answer) as string[]
+      let submittedAnswers: string[]
+      try {
+        submittedAnswers = JSON.parse(submitted_answer) as string[]
+      } catch {
+        return NextResponse.json({ error: 'Invalid submitted_answer JSON format' }, { status: 400 })
+      }
       const correctAnswers = payload.blanks.map((b: any) => b.answer)
 
       // Use AI for semantic matching (handles '0' vs 'zero' etc)

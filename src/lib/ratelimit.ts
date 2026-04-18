@@ -72,6 +72,43 @@ export async function checkRateLimit(userId: string, isPro: boolean = false) {
 }
 
 /**
+ * checkCodeExecutionLimit
+ * Limit code execution runs to prevent abuse of Judge0 API.
+ */
+export async function checkCodeExecutionLimit(userId: string, isPro: boolean = false) {
+  const upstash = getUpstash()
+  if (upstash) {
+    // 50 runs per day for free, 500 for Pro
+    const limit = isPro ? 500 : 50
+    const ratelimit = new Ratelimit({
+      redis: upstash.redis,
+      limiter: Ratelimit.fixedWindow(limit, '1 d'),
+      prefix: 'iteratr:rl:code_exec',
+      analytics: true,
+    })
+
+    const result = await ratelimit.limit(userId)
+    return result.success
+  }
+
+  // Fallback: count code runs in past 24 hours
+  // Note: We track via attempts table for now, in future consider separate logging table
+  const windowStart = new Date()
+  windowStart.setDate(windowStart.getDate() - 1)
+
+  const { count, error } = await supabaseAdmin
+    .from('attempts')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .gt('created_at', windowStart.toISOString())
+
+  if (error) return true // Allow on error
+
+  const limit = isPro ? 500 : 50
+  return (count || 0) < limit
+}
+
+/**
  * checkGenerationLimit
  * Global limit to protect Gemini keys across all users.
  */
@@ -92,7 +129,7 @@ export async function checkGenerationLimit() {
   }
 
   const windowStart = new Date(Date.now() - 15 * 60000).toISOString()
-  
+
   const { count, error } = await supabaseAdmin
     .from('questions')
     .select('*', { count: 'exact', head: true })

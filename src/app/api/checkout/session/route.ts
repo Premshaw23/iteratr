@@ -3,6 +3,9 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { stripe } from '@/lib/stripe'
 
+// Pro subscription price in cents (USD). Set via environment variable for easy changes.
+const PRO_PRICE_CENTS = parseInt(process.env.PRO_PRICE_CENTS || '0', 10)
+
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -22,7 +25,7 @@ export async function POST(req: NextRequest) {
             product_data: {
               name: 'Pro Subscription',
             },
-            unit_amount: 0, // ALPHA PROMO: $0.00
+            unit_amount: PRO_PRICE_CENTS,
           },
           quantity: 1,
         },

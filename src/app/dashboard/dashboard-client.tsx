@@ -8,9 +8,9 @@ import type { UserRow, TopicStatsRow, EloHistoryRow } from '@/types/database'
 import MasteryRadar from './mastery-radar'
 import ActivityGrid from './activity-grid'
 import EloChart from './elo-chart'
-import { 
-  Trophy, Flame, Target, MessageSquare, Plus, ArrowRight, User, Sparkles, Zap, 
-  Search, Layout, List, GitBranch, Share2, Cpu, Link2, Server, LogOut, ChevronRight, Check
+import {
+  Trophy, Flame, Target, MessageSquare, Plus, ArrowRight, User, Sparkles, Zap,
+  Search, Layout, List, GitBranch, Share2, Cpu, Link2, Server, LogOut, ChevronRight, Check, Upload
 } from 'lucide-react'
 import { usePathname, useSearchParams } from 'next/navigation'
 
@@ -328,6 +328,7 @@ export default function DashboardClient({ user, topicStats, eloHistory, intervie
                 { label: 'Technical Stats',  icon: Trophy,  href: '/stats' },
                 { label: 'Mock Interviews', icon: MessageSquare, href: '/interview' },
                 { label: 'Leaderboard',    icon: Trophy,  href: '/leaderboard' },
+                { label: 'Private Uploads', icon: Upload, href: '/upload' },
               ].map(item => (
                 <Link
                   key={item.label}

@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { runAgainstHiddenTests } from '@/lib/judge0'
 import { evaluateCode } from '@/lib/gemini'
+import { checkCodeExecutionLimit } from '@/lib/ratelimit'
 import type { CodePayload } from '@/types/database'
 
 export const dynamic = 'force-dynamic'
@@ -12,6 +13,26 @@ export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.email) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  // Get user to check Pro status and enforce rate limits
+  const { data: user, error: userError } = await supabaseAdmin
+    .from('users')
+    .select('id, is_pro')
+    .eq('email', session.user.email)
+    .single()
+
+  if (userError || !user) {
+    return NextResponse.json({ error: 'User not found' }, { status: 404 })
+  }
+
+  // Check code execution rate limit (50/day for free, 500/day for pro)
+  const withinLimit = await checkCodeExecutionLimit(user.id, user.is_pro)
+  if (!withinLimit) {
+    return NextResponse.json(
+      { error: 'Daily code execution limit exceeded. Upgrade to Pro for more runs.' },
+      { status: 429 }
+    )
   }
 
   const body = await req.json()
