@@ -3,6 +3,8 @@
 import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, Suspense } from 'react'
+import Button from '@/components/Button'
+import FormGroup from '@/components/FormGroup'
 
 const TOPICS = [
   { id: 'arrays',             label: 'Arrays'           },
@@ -32,7 +34,7 @@ const TIMERS = [
 export default function InterviewNewPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6 text-sm text-slate-400">
+      <div className="min-h-screen bg-white flex items-center justify-center p-6 text-sm text-slate-600">
         Preparing your interviewer...
       </div>
     }>
@@ -114,134 +116,135 @@ function InterviewNewContent() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center px-4 py-10 text-slate-200">
-      <div className="w-full max-w-xl">
+    <div className="min-h-screen bg-white flex items-center justify-center px-4 py-10">
+      <div className="w-full max-w-2xl">
 
-        <div className="mb-8">
-          <button onClick={() => router.push('/dashboard')} className="text-sm text-slate-500 hover:text-white mb-4 flex items-center gap-1 transition">
-            ← Dashboard
+        <div className="mb-10">
+          <button
+            onClick={() => router.push('/dashboard')}
+            className="text-sm text-slate-600 hover:text-slate-900 mb-6 flex items-center gap-1 transition font-medium"
+          >
+            ← Back to Dashboard
           </button>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Mock Interview Setup</h1>
-          <p className="text-sm text-slate-400 mt-1">Select your focus area and interviewer style.</p>
+          <h1 className="text-4xl font-bold text-slate-900 mb-2">Mock Interview</h1>
+          <p className="text-base text-slate-600">Select your focus area and interviewer style to begin.</p>
         </div>
 
-        <div className="bg-slate-900 border border-white/5 rounded-2xl p-6 space-y-6 shadow-2xl">
-          
-          <div>
-            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 block">
-              Topic
-            </label>
-            <div className="flex flex-wrap gap-2">
+        <div className="card shadow-lg p-8 space-y-8">
+
+          {/* Topic Selection */}
+          <FormGroup label="Technical Domain" required>
+            <div className="flex flex-wrap gap-3">
               {TOPICS.map(t => (
                 <button
                   key={t.id}
                   onClick={() => toggleTopic(t.id)}
-                  className={`text-sm px-4 py-1.5 rounded-full border transition font-medium ${
+                  className={`text-sm px-4 py-2 rounded-lg border font-medium transition ${
                     selectedTopics.includes(t.id)
-                      ? 'bg-brand text-white border-brand shadow-lg shadow-brand/20'
-                      : 'border-white/10 text-slate-400 hover:border-brand hover:text-brand bg-white/5'
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-md'
+                      : 'border-slate-300 text-slate-700 hover:border-blue-500 hover:text-blue-600 bg-white'
                   }`}
                 >
                   {t.label}
                 </button>
               ))}
             </div>
-          </div>
+          </FormGroup>
 
-          <div>
-            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 block">
-              Difficulty
-            </label>
-            <div className="grid grid-cols-2 gap-2">
+          {/* Difficulty Selection */}
+          <FormGroup label="Difficulty Level">
+            <div className="grid grid-cols-2 gap-3">
               {DIFFS.map(d => (
                 <button
                   key={d.id}
                   onClick={() => setDifficulty(d.id)}
-                  className={`text-left p-3 rounded-xl border transition ${
+                  className={`text-left p-4 rounded-lg border transition ${
                     difficulty === d.id
-                      ? 'border-brand bg-brand/10'
-                      : 'border-white/10 hover:border-brand/50 bg-white/5'
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-slate-200 hover:border-blue-300 bg-white'
                   }`}
                 >
-                  <p className={`text-sm font-bold ${difficulty === d.id ? 'text-brand' : 'text-slate-200'}`}>
+                  <p className={`text-sm font-bold ${difficulty === d.id ? 'text-blue-600' : 'text-slate-900'}`}>
                     {d.label}
                   </p>
-                  <p className="text-[10px] text-slate-500 font-bold uppercase mt-0.5 tracking-tight">{d.desc}</p>
+                  <p className="text-xs text-slate-600 font-medium mt-1">{d.desc}</p>
                 </button>
               ))}
             </div>
-          </div>
+          </FormGroup>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 block">
-                Language
-              </label>
+          {/* Language & Style Selection */}
+          <div className="grid grid-cols-2 gap-6">
+            <FormGroup label="Programming Language">
               <select
                 value={language}
                 onChange={e => setLanguage(e.target.value)}
-                className="w-full border border-white/10 rounded-xl px-3 py-2 text-sm text-white bg-slate-950 focus:outline-none focus:border-brand"
+                className="input"
               >
                 <option value="python">Python 3.11</option>
                 <option value="cpp">C++ 17</option>
                 <option value="java">Java 17</option>
                 <option value="javascript">JavaScript</option>
               </select>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 block">
-                Interviewer style
-              </label>
+            </FormGroup>
+
+            <FormGroup label="Interviewer Style">
               <select
                 value={style}
                 onChange={e => setStyle(e.target.value)}
-                className="w-full border border-white/10 rounded-xl px-3 py-2 text-sm text-white bg-slate-950 focus:outline-none focus:border-brand"
+                className="input"
               >
                 {STYLES.map(s => (
                   <option key={s.id} value={s.id}>{s.label}</option>
                 ))}
               </select>
-            </div>
+            </FormGroup>
           </div>
 
-          <div>
-            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 block">
-              Time pressure
-            </label>
-            <div className="flex gap-2">
+          {/* Time Pressure */}
+          <FormGroup label="Time Pressure">
+            <div className="grid grid-cols-3 gap-3">
               {TIMERS.map(t => (
                 <button
                   key={t.id}
                   onClick={() => setTimer(t.id)}
-                  className={`flex-1 text-sm py-2 px-3 rounded-xl border transition font-medium ${
+                  className={`text-sm py-2.5 px-3 rounded-lg border font-medium transition ${
                     timer === t.id
-                      ? 'border-brand bg-brand/10 text-brand'
-                      : 'border-white/10 text-slate-500 hover:border-brand bg-white/5'
+                      ? 'border-blue-600 bg-blue-50 text-blue-600'
+                      : 'border-slate-300 text-slate-700 hover:border-blue-400 bg-white'
                   }`}
                 >
                   {t.label}
                 </button>
               ))}
             </div>
+          </FormGroup>
+
+          {/* Session Summary */}
+          <div className="bg-slate-50 rounded-lg px-4 py-3 text-sm border border-slate-200">
+            <span className="font-bold text-slate-900">Interview: </span>
+            <span className="text-slate-700">
+              {selectedTopics.length === 0 ? (
+                <span className="text-slate-500">Select a technical domain</span>
+              ) : (
+                <>
+                  {selectedTopics.join(', ')} · {difficulty} difficulty · {style} style · {language}
+                </>
+              )}
+            </span>
           </div>
 
-          <div className="bg-slate-950 rounded-xl px-4 py-3 text-sm text-slate-400 border border-white/5">
-            <span className="font-semibold text-white">Interview: </span>
-            {selectedTopics.length === 0 ? 'Select a technical domain' : (
-              <>
-                {selectedTopics.join(', ')} · live session ·{' '}
-                {style} interviewer · {language}
-              </>
-            )}
-          </div>
-
-          <button
+          {/* CTA Button */}
+          <Button
             onClick={handleStart}
             disabled={starting || selectedTopics.length === 0}
-            className="w-full bg-brand text-white font-bold py-3 rounded-xl hover:bg-brand-dark transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-brand/20"
+            isLoading={starting}
+            variant="primary"
+            size="lg"
+            className="w-full"
           >
-            {starting ? 'Connecting to interviewer...' : 'Enter Virtual Room →'}
-          </button>
+            {starting ? 'Connecting to interviewer...' : 'Enter Virtual Room'}
+          </Button>
 
         </div>
       </div>
