@@ -344,7 +344,7 @@ export default function DashboardClient({ user, topicStats, eloHistory, intervie
 
           <div className="mt-auto pt-2 border-t border-border/50">
             {user.is_pro ? (
-              <div className="px-3 py-3 bg-slate-900 border border-brand/20 rounded-2xl flex flex-col gap-2 relative overflow-hidden group">
+              <div className="px-3 py-3 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl flex flex-col gap-2 relative overflow-hidden group">
                 <div className="absolute -top-10 -right-10 w-24 h-24 bg-brand/10 blur-2xl rounded-full" />
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -357,43 +357,43 @@ export default function DashboardClient({ user, topicStats, eloHistory, intervie
                 </div>
                 <div className="mt-1">
                    <div className="flex items-center justify-between mb-1 px-0.5">
-                      <span className="text-[7px] font-black text-slate-500 uppercase tracking-widest">Compute Quota</span>
+                      <span className="text-[7px] font-black text-slate-600 uppercase tracking-widest">Compute Quota</span>
                       <span className="text-[7px] font-black text-brand uppercase tracking-widest">1,000 / DAY</span>
                     </div>
-                    <div className="h-1 w-full bg-brand/10 rounded-full overflow-hidden">
+                    <div className="h-1 w-full bg-blue-100 rounded-full overflow-hidden">
                       <div className="h-full w-[85%] bg-brand animate-shimmer" />
                     </div>
                 </div>
               </div>
             ) : (
-              <Link 
-                href="/subscribe" 
-                className="group relative block p-3 rounded-2xl bg-slate-900 border border-white/10 shadow-2xl overflow-hidden transition-premium hover:-translate-y-1 active:scale-95"
+              <Link
+                href="/subscribe"
+                className="group relative block p-3 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 shadow-md overflow-hidden transition-premium hover:-translate-y-1 active:scale-95"
               >
                 {/* Refined Background Elements */}
-                <div className="absolute top-0 right-0 w-20 h-20 bg-brand/30 blur-[40px] rounded-full -mr-10 -mt-10 group-hover:bg-brand/40 transition-colors" />
+                <div className="absolute -top-10 -right-10 w-20 h-20 bg-brand/20 blur-[40px] rounded-full -mr-10 -mt-10 group-hover:bg-brand/30 transition-colors" />
 
                 <div className="relative z-10 flex flex-col gap-1.5">
                   <div className="flex items-center justify-between">
                     <div className="flex flex-col">
                       <span className="text-[8px] font-black text-brand uppercase tracking-[0.2em]">Iteratr Pro</span>
-                      <h4 className="text-xs font-black text-white leading-tight">Upgrade Engines</h4>
+                      <h4 className="text-xs font-black text-slate-900 leading-tight">Upgrade Engines</h4>
                     </div>
-                    <div className="p-1 rounded-lg bg-white/5 border border-white/10 group-hover:bg-brand transition-colors group-hover:border-brand">
-                      <Zap size={12} className="text-white fill-brand group-hover:fill-white" />
+                    <div className="p-1 rounded-lg bg-white border border-blue-200 group-hover:bg-brand group-hover:border-brand transition-colors">
+                      <Zap size={12} className="text-brand group-hover:text-white group-hover:fill-current" />
                     </div>
                   </div>
 
-                  <p className="text-[8px] text-slate-400 font-bold leading-tight uppercase tracking-tighter">
+                  <p className="text-[8px] text-slate-600 font-bold leading-tight uppercase tracking-tighter">
                     Senior evaluation (1000/day).
                   </p>
 
                   <div className="mt-0.5">
                     <div className="flex items-center justify-between mb-1 px-0.5">
-                      <span className="text-[7px] font-black text-slate-500 uppercase tracking-widest">Compute</span>
+                      <span className="text-[7px] font-black text-slate-600 uppercase tracking-widest">Compute</span>
                       <span className="text-[7px] font-black text-brand uppercase tracking-widest group-hover:animate-pulse">1,000 CYCLES</span>
                     </div>
-                    <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden border border-white/[0.03]">
+                    <div className="h-1 w-full bg-blue-100 rounded-full overflow-hidden">
                       <div className="h-full w-full bg-gradient-to-r from-brand via-indigo-400 to-brand animate-shimmer opacity-80" />
                     </div>
                   </div>

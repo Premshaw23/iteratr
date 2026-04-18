@@ -5,9 +5,9 @@ export default function SuccessPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white">
+        <div className="min-h-screen bg-white flex flex-col items-center justify-center">
           <div className="w-12 h-12 border-4 border-brand border-t-transparent rounded-full animate-spin mb-6" />
-          <p className="text-slate-400 font-bold uppercase tracking-[0.2em] text-xs">
+          <p className="text-mid font-bold uppercase tracking-[0.2em] text-xs">
             Verifying Technical Quota Upgrade...
           </p>
         </div>
