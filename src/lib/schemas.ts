@@ -13,7 +13,7 @@ export const MCQSchema = z.object({
   }),
   hints:       z.array(z.string()),
   explanation: z.string(),
-  tags:        z.array(z.string()),
+  tags:        z.array(z.string()).optional().default([]),
 })
 
 export const FillSchema = z.object({
@@ -30,7 +30,7 @@ export const FillSchema = z.object({
   }),
   hints:       z.array(z.string()),
   explanation: z.string(),
-  tags:        z.array(z.string()),
+  tags:        z.array(z.string()).optional().default([]),
 })
 
 export const OrderSchema = z.object({
@@ -45,7 +45,7 @@ export const OrderSchema = z.object({
   }),
   hints:       z.array(z.string()),
   explanation: z.string(),
-  tags:        z.array(z.string()),
+  tags:        z.array(z.string()).optional().default([]),
 })
 
 export const CodeSchema = z.object({
@@ -66,7 +66,7 @@ export const CodeSchema = z.object({
   }),
   hints:       z.array(z.string()),
   explanation: z.string(),
-  tags:        z.array(z.string()),
+  tags:        z.array(z.string()).optional().default([]),
 })
 
 export const InterviewScorecardSchema = z.object({

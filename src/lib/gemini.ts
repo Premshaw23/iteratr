@@ -18,8 +18,6 @@ async function callGemini(prompt: string, systemPrompt?: string, retryCount = 0)
   // Rotate key based on current index
   const apiKey = allKeys[currentKeyIndex % allKeys.length]
 
-  const isJsonRequest = prompt.includes('JSON') || (systemPrompt && systemPrompt.includes('JSON'))
-
   const body = {
     contents: [
       {
@@ -35,8 +33,8 @@ async function callGemini(prompt: string, systemPrompt?: string, retryCount = 0)
     generationConfig: {
       temperature:     0.7,
       topP:            0.9,
-      maxOutputTokens: 8192,
-      ...(isJsonRequest && { responseMimeType: 'application/json' }),
+      maxOutputTokens: 16384,  // Increased from 8192 to handle longer responses
+      // Note: Removed responseMimeType - explicit prompt instructions work better
     },
   }
 
@@ -76,10 +74,57 @@ async function callGemini(prompt: string, systemPrompt?: string, retryCount = 0)
 
 // ── Strip markdown code fences from JSON response ─────────────
 function extractJSON(raw: string): string {
-  return raw
-    .replace(/```json\n?/g, '')
-    .replace(/```\n?/g, '')
-    .trim()
+  // First, try to extract from markdown code blocks
+  const codeBlockMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/)
+  const content = codeBlockMatch ? codeBlockMatch[1] : raw
+
+  // Try to find a valid JSON object by finding opening { and finding the matching }
+  const trimmed = content.trim()
+
+  // Find the first { or [
+  let startIdx = trimmed.search(/[\{\[]/)
+  if (startIdx === -1) {
+    // Log what we received for debugging
+    console.error('No JSON object or array found. Raw response preview:', trimmed.substring(0, 500))
+    throw new Error('No JSON found in response - Gemini may not be returning JSON format')
+  }
+
+  // Try to parse from this position onwards
+  let bestCandidate = null
+  let bestError = null
+
+  for (let endIdx = trimmed.length; endIdx > startIdx; endIdx--) {
+    try {
+      const candidate = trimmed.substring(startIdx, endIdx)
+      // Quick validation - should end with } or ]
+      if (!candidate.trim().match(/[\}\]]$/)) continue
+      const parsed = JSON.parse(candidate)
+
+      // Check if this looks complete (has expected fields for code question)
+      if (parsed.type === 'code' && parsed.payload?.hidden_tests?.length > 0) {
+        console.log('Successfully extracted complete JSON')
+        return candidate
+      }
+
+      // Save as best attempt if we found valid JSON
+      if (!bestCandidate) {
+        bestCandidate = candidate
+      }
+    } catch (e) {
+      bestError = e
+      // Continue trying
+    }
+  }
+
+  // If we found partial but valid JSON, it might be truncated
+  if (bestCandidate) {
+    console.warn('Found valid JSON but may be truncated (missing fields)')
+    return bestCandidate
+  }
+
+  // If we get here, the response was invalid
+  console.error('Failed to extract JSON. Response preview:', trimmed.substring(0, 500))
+  throw new Error(`Could not extract valid JSON from response`)
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -205,11 +250,17 @@ Rules:
 - Make 2 options plausibly wrong (common misconceptions), 1 clearly wrong, 1 correct
 - distractor_reasons must explain why EACH option is right or wrong (all 4)
 - hints must NEVER give the answer directly
-- problem_statement must be clear and unambiguous`
+- problem_statement must be clear and unambiguous
+- CRITICAL: Ensure all newlines are escaped as \\n. All quotes must be escaped as \\"`
 
-  const raw = await callGemini(prompt, systemPrompt)
-  const json = extractJSON(raw)
-  return MCQSchema.parse(JSON.parse(json)) as GeneratedMCQ
+  try {
+    const raw = await callGemini(prompt, systemPrompt)
+    const json = extractJSON(raw)
+    return MCQSchema.parse(JSON.parse(json)) as GeneratedMCQ
+  } catch (error: any) {
+    console.error('MCQ generation failed:', error.message)
+    throw error
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -372,11 +423,17 @@ Rules:
 - problem_statement must contain between 1 to 3 "___" placeholders.
 - payload.blanks must have the SAME number of items as placeholders.
 - blanks should be one word or a short value (not long sentences).
-- hints must NEVER reveal the answers directly.`
+- hints must NEVER reveal the answers directly.
+- CRITICAL: Ensure all newlines are escaped as \\n. All quotes must be escaped as \\"`
 
-  const raw = await callGemini(prompt, systemPrompt)
-  const json = extractJSON(raw)
-  return FillSchema.parse(JSON.parse(json)) as GeneratedFill
+  try {
+    const raw = await callGemini(prompt, systemPrompt)
+    const json = extractJSON(raw)
+    return FillSchema.parse(JSON.parse(json)) as GeneratedFill
+  } catch (error: any) {
+    console.error('Fill generation failed:', error.message)
+    throw error
+  }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -425,11 +482,17 @@ STRICT JSON format:
 Rules:
 - Provide 4 to 6 steps.
 - 'shuffled_steps' must be a random shuffle of the 'steps' array.
-- steps must be clearly distinct and sequential.`
+- steps must be clearly distinct and sequential.
+- CRITICAL: Ensure all newlines are escaped as \\n. All quotes must be escaped as \\"`
 
-  const raw = await callGemini(prompt, systemPrompt)
-  const json = extractJSON(raw)
-  return OrderSchema.parse(JSON.parse(json)) as GeneratedOrder
+  try {
+    const raw = await callGemini(prompt, systemPrompt)
+    const json = extractJSON(raw)
+    return OrderSchema.parse(JSON.parse(json)) as GeneratedOrder
+  } catch (error: any) {
+    console.error('Order generation failed:', error.message)
+    throw error
+  }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -442,58 +505,48 @@ export async function generateCodeSpace(
   language: 'python' | 'cpp' | 'javascript' = 'cpp',
   adaptiveContext: string = '',
   customPrompt?: string,
-  specificSubtopic?: string
+  specificSubtopic?: string,
+  retryCount: number = 0
 ): Promise<GeneratedCode> {
-  const systemPrompt = `You are a Senior Software Engineer creating HIGH-FIDELITY coding challenges for iteratr.
-${adaptiveContext ? `MENTOR CONTEXT:\n${adaptiveContext}` : ''}
-Your goal is to test logic and algorithm implementation. Avoid boilerplate — provide a clean scaffold.
+  const systemPrompt = `You are a Senior Software Engineer creating coding challenges for iteratr.
+Your goal is to test logic and algorithm implementation.
 
-STRICT FORMATTING RULES:
-1. Use Markdown backticks for variable names (like \`nums\`) ONLY in the 'problem_statement' field.
-2. NEVER use backticks around variable names, function names, or types in the 'scaffold', 'hidden_tests', or any other code-only fields. These must be valid, executable code.
-3. Use bolding (**) for crucial constraints in the description.
-3. Use Markdown code blocks for examples.
-4. Use a clear structure: Description, Example, Technical Notes/Constraints.
-Do NOT include the subtopic in the problem statement — it will be displayed separately as a heading.`
+CRITICAL: Respond with ONLY valid JSON. No markdown, text, or explanations.`
 
-  const prompt = `Generate a Coding Challenge about: ${topic}
-Language: ${language}
-Target difficulty Elo: ${targetElo}
-
-STRICT JSON format:
+  const prompt = `Generate a coding challenge in ${language} about ${topic}.
+Respond with ONLY this JSON structure (no other text):
 {
   "type": "code",
   "topic": "${topic}",
-  "subtopic": "specific subtopic",
+  "subtopic": "specific aspect",
   "difficulty_elo": ${targetElo},
-  "problem_statement": "The full markdown description of the problem.",
+  "problem_statement": "Clear problem description",
   "payload": {
     "language": "${language}",
-    "scaffold": "def solution(...):\\n    # your code here",
+    "scaffold": "function skeleton",
     "hidden_tests": [
-      { "input": "...", "expected_output": "...", "description": "basic case" },
-      { "input": "...", "expected_output": "...", "description": "edge case" }
+      {"input": "test", "expected_output": "result", "description": "case"}
     ],
-    "solution": "the full correct code"
+    "solution": "complete solution"
   },
-  "hints": [
-    "Level 1: Big picture logic",
-    "Level 2: Data structure nudge",
-    "Level 3: Pseudocode / logic hint",
-    "Level 4: Full walkthrough with code snippets"
-  ],
-  "explanation": "Detailed explanation of the optimal solution",
-  "tags": ["algorithm", "${language}"]
-}
+  "hints": ["hint1", "hint2", "hint3", "hint4"],
+  "explanation": "why solution works",
+  "tags": ["tag1", "tag2"]
+}`
 
-Rules:
-- Problem statement should be in professional markdown.
-- Hidden tests must be valid inputs for the generated solution.
-- The scaffold MUST match the language syntax.`
-
-  const raw = await callGemini(prompt, systemPrompt)
-  const json = extractJSON(raw)
-  return CodeSchema.parse(JSON.parse(json)) as GeneratedCode
+  try {
+    const raw = await callGemini(prompt, systemPrompt)
+    const json = extractJSON(raw)
+    return CodeSchema.parse(JSON.parse(json)) as GeneratedCode
+  } catch (error: any) {
+    if (retryCount < 2) {
+      console.warn(`Code generation attempt ${retryCount + 1} failed, retrying:`, error.message)
+      // Exponential backoff: 1s, then 2s
+      await new Promise(resolve => setTimeout(resolve, (retryCount + 1) * 1000))
+      return generateCodeSpace(topic, targetElo, language, adaptiveContext, customPrompt, specificSubtopic, retryCount + 1)
+    }
+    throw error
+  }
 }
 
 // ─────────────────────────────────────────────────────────────

@@ -39,6 +39,14 @@ function getJudge0Config() {
   return { apiKey, apiUrl }
 }
 
+/**
+ * Judge0 Timeout Strategy:
+ * - 15-second timeout per attempt (increased from 6s to handle public API latency)
+ * - 1 retry on failure (reduced from 2 to avoid cascading requests)
+ * - Public Judge0 API can be slow/overloaded; paid tier is much faster
+ * - If timeout occurs, AI verification is used as fallback
+ */
+
 function encodeBase64(str: string): string {
   return Buffer.from(str, 'utf8').toString('base64')
 }
@@ -114,19 +122,20 @@ export async function runOnJudge0(
   sourceCode: string,
   language: string,
   stdin?: string,
-  retries = 2
+  retries = 1
 ): Promise<Judge0RunResult | null> {
   const { apiKey, apiUrl } = getJudge0Config()
-  
+
   // Normalize language name to lowercase for mapping
   const normalizedLang = language.toLowerCase() as SupportedLanguage
   const languageId = LANG_MAP[normalizedLang] || LANG_MAP.python
 
   const wrappedCode = wrapCodeForExecution(sourceCode, language)
 
-  // Add a 6-second timeout per attempt
+  // Increased timeout to 15 seconds per attempt to handle overloaded public API
+  // The public Judge0 API can be slow, so we give it more time
   const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 6000)
+  const timeoutId = setTimeout(() => controller.abort(), 15000)
 
   try {
     const headers: Record<string, string> = {
@@ -168,8 +177,8 @@ export async function runOnJudge0(
     if (retries > 0) {
       const reason = error.name === 'AbortError' ? 'Timeout' : error.message
       console.warn(`[Judge0] Attempt failed (${reason}). Retrying... (${retries} left).`)
-      // Wait a bit before retrying
-      await new Promise(r => setTimeout(r, 800))
+      // Wait a bit before retrying to avoid hammering the API
+      await new Promise(r => setTimeout(r, 1200))
       return runOnJudge0(sourceCode, language, stdin, retries - 1)
     }
     console.error(`[Judge0] Final fetch exception:`, error)

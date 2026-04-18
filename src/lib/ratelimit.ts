@@ -29,19 +29,24 @@ export async function checkRateLimit(userId: string, isPro: boolean = false) {
       analytics: true,
     })
 
-    const key = userId
-    const result = await ratelimit.limit(key)
+    try {
+      const key = userId
+      const result = await ratelimit.limit(key)
 
-    if (result.success) {
-      const used = hardLimit - result.remaining
-      return {
-        allowed: true,
-        nearLimit: used > baseLimit * 0.8,
-        graceActive: !isPro && used >= baseLimit,
+      if (result.success) {
+        const used = hardLimit - result.remaining
+        return {
+          allowed: true,
+          nearLimit: used > baseLimit * 0.8,
+          graceActive: !isPro && used >= baseLimit,
+        }
       }
-    }
 
-    return { allowed: false }
+      return { allowed: false }
+    } catch (error) {
+      console.warn('Upstash rate limit failed, falling back to DB:', error)
+      // Fall through to DB-based rate limiting
+    }
   }
 
   const windowStart = new Date()
@@ -55,7 +60,7 @@ export async function checkRateLimit(userId: string, isPro: boolean = false) {
 
   if (error) return { allowed: true }
 
-  const baseLimit = isPro ? 1000 : 150 
+  const baseLimit = isPro ? 1000 : 150
   const currentCount = count || 0
 
   // Grace Period: Enable them to finish an active session (up to 5 extra)
@@ -87,8 +92,13 @@ export async function checkCodeExecutionLimit(userId: string, isPro: boolean = f
       analytics: true,
     })
 
-    const result = await ratelimit.limit(userId)
-    return result.success
+    try {
+      const result = await ratelimit.limit(userId)
+      return result.success
+    } catch (error) {
+      console.warn('Upstash code execution limit failed, falling back to DB:', error)
+      // Fall through to DB-based rate limiting
+    }
   }
 
   // Fallback: count code runs in past 24 hours
@@ -124,8 +134,13 @@ export async function checkGenerationLimit() {
       analytics: true,
     })
 
-    const result = await ratelimit.limit('global')
-    return result.success
+    try {
+      const result = await ratelimit.limit('global')
+      return result.success
+    } catch (error) {
+      console.warn('Upstash generation limit failed, falling back to DB:', error)
+      // Fall through to DB-based rate limiting
+    }
   }
 
   const windowStart = new Date(Date.now() - 15 * 60000).toISOString()
