@@ -78,4 +78,4 @@ node server/index.js
 - Run `npm run lint` and `npm run build` before submitting.
 
 ## License
-No license has been published yet. If you intend to use or distribute this project, please contact the maintainer.
+All rights reserved. No license is granted until a license file is published.
