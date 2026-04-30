@@ -27,6 +27,8 @@ iteratr is split into two deployable services:
    - Low-latency interview chat and AI interviewer responses
    - Background grading signals for interview feedback
 
+The Next.js app connects to the interview server from the client using `NEXT_PUBLIC_WS_URL`. Persistent user data and practice history live in Supabase; the interview server remains otherwise decoupled.
+
 ## Tech Stack
 - **Frontend/Server**: Next.js 15 (App Router), React 19, TypeScript
 - **Styling**: Tailwind CSS
