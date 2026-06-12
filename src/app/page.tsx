@@ -1,6 +1,7 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import Link from 'next/link'
+import { Zap, Brain } from 'lucide-react'
 
 // ── Inline SVG Icons ──────────────────────────────────────────
 function IconArrow() {
@@ -340,7 +341,7 @@ export default async function LandingPage() {
   return (
     <div className="min-h-screen bg-white text-slate-900">
       {/* NAVBAR */}
-      <nav className="sticky top-0 z-50 border-b border-slate-200 bg-white/80 backdrop-blur-lg">
+      <nav className="sticky top-0 z-50 border-b border-slate-200/50 bg-white/70 backdrop-blur-xl shadow-sm transition-all duration-300">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 no-underline">
@@ -351,6 +352,34 @@ export default async function LandingPage() {
               itera<span className="text-blue-600">tr</span>
             </span>
           </Link>
+
+          {/* Navigation Links */}
+          <div className="hidden md:flex items-center gap-6">
+            <Link
+              href="#features"
+              className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+            >
+              Features
+            </Link>
+            <Link
+              href="#how-it-works"
+              className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+            >
+              Methodology
+            </Link>
+            <Link
+              href="/leaderboard"
+              className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+            >
+              Leaderboard
+            </Link>
+            <Link
+              href="#pricing"
+              className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+            >
+              Pricing
+            </Link>
+          </div>
 
           {/* Links */}
           <div className="flex items-center gap-2">
@@ -417,11 +446,27 @@ export default async function LandingPage() {
               </Link>
             </div>
 
-            {/* Stats */}
-            <div className="flex gap-8 pt-8 border-t border-slate-200">
-              <StatItem value="Elo-based" label="adaptive difficulty" />
-              <StatItem value="4-level" label="socratic hints" />
-              <StatItem value="0 answers" label="handed out for free" />
+            {/* Highlights */}
+            <div className="flex flex-wrap gap-8 pt-8 border-t border-slate-200">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 border border-blue-100/80 shadow-sm">
+                  <Zap className="w-5 h-5 fill-current" />
+                </div>
+                <div>
+                  <div className="font-semibold text-slate-900 text-sm">Elo Tracking</div>
+                  <div className="text-xs text-slate-500">Live difficulty mapping</div>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center text-green-600 border border-green-100/80 shadow-sm">
+                  <Brain className="w-5 h-5 text-green-600" />
+                </div>
+                <div>
+                  <div className="font-semibold text-slate-900 text-sm">Socratic Hints</div>
+                  <div className="text-xs text-slate-500">Guiding you to the answer</div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -472,7 +517,7 @@ export default async function LandingPage() {
       </section>
 
       {/* HOW IT WORKS */}
-      <section className="py-20 px-6 bg-slate-50 border-t border-slate-200">
+      <section id="how-it-works" className="py-20 px-6 bg-slate-50 border-t border-slate-200">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <p className="text-xs font-semibold text-green-600 uppercase tracking-widest mb-4">
@@ -570,7 +615,7 @@ export default async function LandingPage() {
       </section>
 
       {/* PRICING */}
-      <section className="py-24 px-6 max-w-4xl mx-auto">
+      <section id="pricing" className="py-24 px-6 max-w-4xl mx-auto">
         <div className="text-center mb-16">
           <p className="text-xs font-semibold text-blue-600 uppercase tracking-widest mb-4">
             PRICING
