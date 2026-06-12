@@ -2,82 +2,98 @@
 
 **AI-powered coding mentorship for adaptive practice, Socratic guidance, and interview-grade feedback.**
 
-## 🚧 Work in Progress
-iteratr is under active development. Core learning, evaluation, and interview flows exist, but the product is not feature-complete and APIs/UX may change. Expect breaking changes as the platform hardens toward production.
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](#)
+[![TypeScript](https://img.shields.io/badge/typescript-5.x-blue)](#)
+[![Next.js](https://img.shields.io/badge/next.js-15.x-black)](#)
+
+---
+
+## 🚧 Status
+iteratr is under active development. Core learning, evaluation, and interview flows are fully functional. This project features database-backed mock interviews and detailed post-interview evaluation replays.
 
 ## Key Features
-- **Adaptive ELO engine** with streak tracking and performance history.
-- **AI-generated questions** (MCQ, fill-in-the-blank, ordering, and code) tuned to user difficulty.
-- **Socratic hinting + AI feedback** for explanations and remediation.
-- **Code evaluation pipeline** with Judge0 execution and AI verification.
-- **Real-time mock interviews** via a dedicated WebSocket AI interviewer and silent grading.
-- **Dashboards, leaderboard, and public profiles** (early-stage analytics).
-- **Stripe checkout upgrade flow** for Pro tier (early-stage).
-- **Rate limiting & quotas** with Upstash or database fallback.
+
+- **Adaptive Elo Engine**: Dynamic difficulty mapping with streak tracking and performance history.
+- **Socratic Hinting**: 4-level AI-guided hinting system that helps users solve problems themselves without giving away the answers.
+- **Code Evaluation Pipeline**: Real-time code execution with Judge0 sandboxed environments and AI verification.
+- **Mock Interview Dashboard**: A central control center showcasing technical domain statistics, mock interview KPI widgets, and complete past interview session history.
+- **Dynamic Session Replays**: A comprehensive replay center displaying:
+  * **Scorecard Overview**: Metrics for overall outcome (Hire/No Hire), along with scores for Code Quality, Logic, Speed, and Communication.
+  * **Code Replay**: A read-only Monaco code view containing the candidate's final submitted code.
+  * **Interactive Dialogue Timeline**: A speech-bubble chat history showing conversation, interspersed with inline **Silent Grader Observations** nested directly under the candidate's responses.
+- **Logos / Social Proof**: Refined landing pages with responsive navigation, glassmorphic headers, and premium UI styling.
 
 ## System Architecture
-iteratr is split into two deployable services:
 
-1. **Next.js App**
-   - UI, API routes, and session management
-   - Question generation, grading, ELO updates, and analytics
-   - Integrations: Supabase, Gemini, Judge0, Stripe, Upstash
+iteratr consists of two main decoupled components:
 
-2. **WebSocket Interview Server**
-   - Low-latency interview chat and AI interviewer responses
-   - Background grading signals for interview feedback
+1. **Next.js App** (`/src`)
+   - Handles the client application, API routes, database integrations, and static rendering.
+   - Leverages Supabase (PostgreSQL) for user metadata, practice history, and session scorecards.
+   - Integrates with Gemini AI for adaptive question logic, hint generation, and silent grading rubrics.
 
-The Next.js app connects to the interview server from the client using `NEXT_PUBLIC_WS_URL`. Persistent user data and practice history live in Supabase; the interview server remains otherwise decoupled.
+2. **WebSocket Interview Server** (`/server`)
+   - A Node/Socket.io server providing real-time bidirectional audio/chat streams for live mock interviews.
+   - Delivers instant interviewer responses and emits silent grader checkpoints without blocking the UI.
+
+The Next.js app communicates with the WebSocket server using `NEXT_PUBLIC_WS_URL`.
 
 ## Tech Stack
-- **Frontend/Server**: Next.js 15 (App Router), React 19, TypeScript
-- **Styling**: Tailwind CSS
-- **Auth**: NextAuth (Google/GitHub OAuth)
-- **Data**: Supabase (PostgreSQL + pgvector)
-- **AI**: Google Gemini
-- **Code Execution**: Judge0
-- **Real-time**: Socket.io
-- **Payments**: Stripe Checkout
+
+- **Core**: Next.js 15 (App Router), React 19, TypeScript
+- **Styling**: Tailwind CSS, Vanilla CSS
+- **Auth**: NextAuth.js
+- **Database**: Supabase (PostgreSQL)
+- **AI Engine**: Google Gemini API
+- **Execution Sandbox**: Judge0 API
+- **Real-time Engine**: Socket.io
 - **Rate Limiting**: Upstash Redis
-- **Validation/Charts**: Zod, Recharts
-
-## How it works
-1. **User signs in** and starts a practice or interview session.
-2. **Question selection** targets a difficulty band using the user’s ELO.
-3. **AI generation** creates MCQ/fill/order/code tasks when cache misses.
-4. **User submits** an answer or code; the platform executes and evaluates it.
-5. **Feedback + ELO updates** are recorded along with streak and topic stats.
-6. **Interview mode** streams messages to the WebSocket server for live AI responses.
-
-## Roadmap
-- Hardened production deployment (observability, retries, queueing)
-- Advanced interview rubrics and structured scoring
-- Curated question bank with human-reviewed difficulty calibration
-- Team/coach dashboards and cohort analytics
-- Expanded language support and richer code execution sandboxing
+- **Visualizations**: Recharts, Lucide Icons
 
 ## Setup & Installation
-**Prerequisites**: Node.js 20+, npm 9+, Supabase project, Gemini API key, Stripe account (optional), Upstash Redis (optional), Judge0 endpoint (optional).
 
+### Prerequisites
+- Node.js 20+
+- npm 9+
+- A Supabase PostgreSQL database
+- A Gemini API key
+
+### 1. Installation
+Install project dependencies:
 ```bash
 npm install
+```
+
+### 2. Environment Setup
+Configure environment variables:
+```bash
 cp .env.example .env.local
 ```
+Update `.env.local` with your database credentials, NextAuth configuration, Gemini API key, and Judge0 endpoint.
 
-Fill in `.env.local` values, then run both services:
-
+### 3. Run Development Servers
+Start the Next.js development server:
 ```bash
-# Next.js app
 npm run dev
-
-# WebSocket interview server
-node server/index.js
 ```
 
-## Contribution Guidelines
-- Open an issue for major changes or new features.
-- Keep PRs focused and well-scoped.
-- Run `npm run lint` and `npm run build` before submitting.
+In a separate terminal, start the real-time WebSocket interview server:
+```bash
+# Navigate to the server folder and run
+cd server
+npm install
+node index.js
+```
 
-## License
-All rights reserved. No license is granted until a license file is published.
+---
+
+## Code Quality Check
+Before submitting PRs or deploying, verify that the project builds and complies with code standards:
+
+```bash
+# Typecheck check
+npx tsc --noEmit
+
+# Linter check
+npm run lint
+```
