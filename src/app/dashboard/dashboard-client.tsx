@@ -10,7 +10,7 @@ import ActivityGrid from './activity-grid'
 import EloChart from './elo-chart'
 import {
   Trophy, Flame, Target, MessageSquare, Plus, ArrowRight, User, Sparkles, Zap,
-  Search, Layout, List, GitBranch, Share2, Cpu, Link2, Server, LogOut, ChevronRight, Check, Upload
+  Search, Layout, List, GitBranch, Share2, Cpu, Link2, Server, LogOut, ChevronRight, Check, Upload, Snowflake
 } from 'lucide-react'
 import { usePathname, useSearchParams } from 'next/navigation'
 
@@ -432,7 +432,11 @@ export default function DashboardClient({ user, topicStats, eloHistory, intervie
               { 
                 label: 'Streak',      
                 value: `${user.streak_count}d`,          
-                sub: user.streak_freeze_available ? 'FREEZE ACTIVE ❄️' : 'days active',     
+                sub: user.streak_freeze_available ? (
+                  <span className="flex items-center gap-1 justify-center md:justify-start">
+                    FREEZE ACTIVE <Snowflake size={10} className="animate-spin-slow text-blue-400" />
+                  </span>
+                ) : 'days active',     
                 icon: Flame,  
                 color: user.streak_freeze_available ? 'text-blue-600' : 'text-amber-600' 
               },
@@ -537,7 +541,9 @@ export default function DashboardClient({ user, topicStats, eloHistory, intervie
               <Plus className="w-8 h-8" strokeWidth={3} />
             </div>
             <div className="flex-1 relative z-10">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70 mb-1">Today&apos;s Daily Challenge ❄️</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70 mb-1 flex items-center gap-1">
+                Today&apos;s Daily Challenge <Snowflake size={10} className="text-blue-300 animate-pulse" />
+              </p>
               <h3 className="text-xl font-black tracking-tight text-white mb-2">
                 Ground your skills with the community challenge.
               </h3>

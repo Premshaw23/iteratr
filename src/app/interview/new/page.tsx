@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, Suspense } from 'react'
 import Button from '@/components/Button'
 import FormGroup from '@/components/FormGroup'
+import { ChevronLeft } from 'lucide-react'
 
 const TOPICS = [
   { id: 'arrays',             label: 'Arrays'           },
@@ -72,23 +73,22 @@ function InterviewNewContent() {
     setStarting(true)
 
     try {
-      const res = await fetch('/api/questions/generate', {
+      const res = await fetch('/api/interview/create', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           topic:        selectedTopics[0],
+          difficulty,
+          style,
+          timer,
+          language,
           customPrompt: customPrompt || undefined,
-          language:     language,
-          forceType:    'code'
         }),
       })
 
       const data = await res.json()
-      if (data.question) {
-        const sessionId =
-          typeof crypto !== 'undefined' && 'randomUUID' in crypto
-            ? crypto.randomUUID()
-            : `${Date.now()}-${Math.random().toString(36).slice(2)}`
+      if (data.question && data.sessionId) {
+        const sessionId = data.sessionId
 
         // Clear old session persistence from storage
         localStorage.removeItem('curr_interview_code')
@@ -107,11 +107,11 @@ function InterviewNewContent() {
         }))
         router.push('/interview/play')
       } else {
-        throw new Error('No question generated')
+        throw new Error(data.error || 'Failed to initialize session')
       }
-    } catch (err) {
+    } catch (err: any) {
       setStarting(false)
-      alert('Failed to generate interview problem.')
+      alert(err.message || 'Failed to generate interview problem.')
     }
   }
 
@@ -122,9 +122,9 @@ function InterviewNewContent() {
         <div className="mb-10">
           <button
             onClick={() => router.push('/dashboard')}
-            className="text-sm text-slate-600 hover:text-slate-900 mb-6 flex items-center gap-1 transition font-medium"
+            className="text-sm text-slate-600 hover:text-slate-900 mb-6 flex items-center gap-1.5 transition font-semibold"
           >
-            ← Back to Dashboard
+            <ChevronLeft size={16} /> Back to Dashboard
           </button>
           <h1 className="text-4xl font-bold text-slate-900 mb-2">Mock Interview</h1>
           <p className="text-base text-slate-600">Select your focus area and interviewer style to begin.</p>
@@ -183,7 +183,6 @@ function InterviewNewContent() {
               >
                 <option value="python">Python 3.11</option>
                 <option value="cpp">C++ 17</option>
-                <option value="java">Java 17</option>
                 <option value="javascript">JavaScript</option>
               </select>
             </FormGroup>

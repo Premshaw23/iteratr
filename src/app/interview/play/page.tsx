@@ -305,7 +305,9 @@ export default function InterviewPlayPage() {
         body: JSON.stringify({
           problem: problem.problem_statement,
           history: messages,
-          userCode
+          userCode,
+          sessionId: interviewSessionIdRef.current,
+          observerNotes
         })
       })
       const data = await res.json()
@@ -391,19 +393,19 @@ export default function InterviewPlayPage() {
       )}
 
       {/* Navbar */}
-      <header className="h-14 bg-white border-b border-border px-6 flex items-center justify-between shrink-0">
+      <header className="h-14 bg-white/80 backdrop-blur-md border-b border-border px-6 flex items-center justify-between shrink-0 sticky top-0 z-50">
         <div className="flex items-center gap-4">
-          <button onClick={() => router.push('/dashboard')} className="text-mid hover:text-dark transition">
+          <button onClick={() => router.push('/dashboard')} className="p-1.5 hover:bg-slate-100 rounded-lg transition text-mid hover:text-dark">
             <ChevronLeft size={20} />
           </button>
           <div className="h-4 w-px bg-border" />
           <h1 className="text-sm font-bold tracking-tight text-dark flex items-center gap-2">
-            <Layout size={16} className="text-brand" />
+            <Layout size={16} className="text-brand animate-pulse" />
             Iteratr Interview <span className="text-muted font-medium">/ {problem.subtopic}</span>
           </h1>
         </div>
         <div className="flex gap-2">
-          <div className={`px-3 py-1 ${isConnected ? 'bg-green-100 text-green-700 border-green-200 shadow-[0_0_15px_-5px_rgba(34,197,94,0.4)]' : 'bg-surface text-muted border-border'} rounded-full border text-[10px] uppercase font-black tracking-widest transition-all duration-500 flex items-center gap-1.5`}>
+          <div className={`px-3 py-1 ${isConnected ? 'bg-green-100/80 text-green-700 border-green-200/50 shadow-[0_0_15px_-5px_rgba(34,197,94,0.4)]' : 'bg-surface text-muted border-border'} rounded-full border text-[10px] uppercase font-black tracking-widest transition-all duration-500 flex items-center gap-1.5`}>
             {isConnected && <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />}
             {isConnected ? 'REAL-TIME ACTIVE' : 'LIVE SESSION'}
           </div>
@@ -704,7 +706,7 @@ export default function InterviewPlayPage() {
 
             <div className="grid grid-cols-2 gap-4 mb-8">
               {[
-                { label: 'Overall Score', value: `${scorecard.overall_score}%`, color: 'text-white' },
+                { label: 'Overall Score', value: `${scorecard.overall_score}%`, color: 'text-brand' },
                 { label: 'Decision', value: scorecard.hire_decision, color: scorecard.hire_decision.includes('No') ? 'text-red-500' : 'text-green-500' }
               ].map(s => (
                 <div key={s.label} className="bg-surface border border-border rounded-2xl p-4 text-center">
