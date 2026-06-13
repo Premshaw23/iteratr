@@ -694,72 +694,74 @@ export default function InterviewPlayPage() {
 
       {/* SCORECARD OVERLAY */}
       {scorecard && (
-        <div className="fixed inset-0 z-[100] bg-white/90 backdrop-blur-xl flex items-center justify-center p-6 overflow-y-auto">
-          <div className="w-full max-w-2xl bg-slate-100 border border-border rounded-3xl p-8 shadow-2xl relative">
-            <div className="text-center mb-10">
-              <div className="inline-flex items-center justify-center w-20 h-20 bg-brand/10 rounded-full mb-4 border border-brand/20">
-                <Trophy size={40} className="text-brand" />
-              </div>
-              <h2 className="text-3xl font-black text-dark tracking-tighter">Your Performance Scorecard</h2>
-              <p className="text-muted font-medium">Session: {problem.subtopic}</p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 mb-8">
-              {[
-                { label: 'Overall Score', value: `${scorecard.overall_score}%`, color: 'text-brand' },
-                { label: 'Decision', value: scorecard.hire_decision, color: scorecard.hire_decision.includes('No') ? 'text-red-500' : 'text-green-500' }
-              ].map(s => (
-                <div key={s.label} className="bg-surface border border-border rounded-2xl p-4 text-center">
-                  <p className="text-[10px] font-bold text-muted uppercase tracking-widest mb-1">{s.label}</p>
-                  <p className={`text-xl font-black ${s.color}`}>{s.value}</p>
+        <div className="fixed inset-0 z-[100] bg-white/90 backdrop-blur-xl overflow-y-auto">
+          <div className="flex min-h-full items-center justify-center p-6">
+            <div className="w-full max-w-2xl bg-slate-100 border border-border rounded-3xl p-8 shadow-2xl relative">
+              <div className="text-center mb-10">
+                <div className="inline-flex items-center justify-center w-20 h-20 bg-brand/10 rounded-full mb-4 border border-brand/20">
+                  <Trophy size={40} className="text-brand" />
                 </div>
-              ))}
-            </div>
+                <h2 className="text-3xl font-black text-dark tracking-tighter">Your Performance Scorecard</h2>
+                <p className="text-muted font-medium">Session: {problem.subtopic}</p>
+              </div>
 
-            <div className="space-y-4 mb-10">
-              {[
-                { label: 'Communication', ...scorecard.communication, icon: MessageCircle },
-                { label: 'Logic & Code', ...scorecard.logic, icon: Layout },
-                { label: 'Optimization', ...scorecard.optimization, icon: Trophy }
-              ].map(crit => (
-                <div key={crit.label} className="bg-surface border border-border rounded-2xl p-5">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <crit.icon size={16} className="text-brand" />
-                      <span className="text-sm font-bold text-dark">{crit.label}</span>
-                    </div>
-                    <span className="text-xs font-black text-brand bg-brand/10 px-2 py-0.5 rounded-full">{crit.score}/10</span>
+              <div className="grid grid-cols-2 gap-4 mb-8">
+                {[
+                  { label: 'Overall Score', value: `${scorecard.overall_score}%`, color: 'text-brand' },
+                  { label: 'Decision', value: scorecard.hire_decision, color: scorecard.hire_decision.includes('No') ? 'text-red-500' : 'text-green-500' }
+                ].map(s => (
+                  <div key={s.label} className="bg-surface border border-border rounded-2xl p-4 text-center">
+                    <p className="text-[10px] font-bold text-muted uppercase tracking-widest mb-1">{s.label}</p>
+                    <p className={`text-xl font-black ${s.color}`}>{s.value}</p>
                   </div>
-                  <p className="text-xs text-muted leading-relaxed font-medium">{crit.feedback}</p>
-                </div>
-              ))}
-
-              <div className="bg-brand/5 border border-brand/10 rounded-2xl p-5">
-                <p className="text-[10px] font-black text-brand uppercase tracking-widest mb-2">Lead Interviewer Summary</p>
-                <p className="text-sm text-mid leading-relaxed italic">&quot;{scorecard.summary}&quot;</p>
+                ))}
               </div>
-            </div>
 
-            <div className="flex gap-3">
-              <button
-                onClick={() => { clearSession(); router.push('/dashboard') }}
-                className="flex-1 py-4 rounded-2xl bg-surface hover:bg-slate-100 border border-border text-sm font-bold transition"
-              >
-                Back to Dashboard
-              </button>
-              <button
-                onClick={() => {
-                  // Clear everything except config to trigger a new question generation
-                  localStorage.removeItem('curr_interview_code')
-                  localStorage.removeItem('curr_interview_msgs')
-                  localStorage.removeItem('curr_interview_problem')
-                  localStorage.removeItem('curr_interview_taskNum')
-                  window.location.reload()
-                }}
-                className="flex-1 py-4 rounded-2xl bg-brand hover:bg-brand-dark text-sm font-bold text-white transition shadow-lg shadow-brand/20"
-              >
-                Start Next Challenge
-              </button>
+              <div className="space-y-4 mb-10">
+                {[
+                  { label: 'Communication', ...scorecard.communication, icon: MessageCircle },
+                  { label: 'Logic & Code', ...scorecard.logic, icon: Layout },
+                  { label: 'Optimization', ...scorecard.optimization, icon: Trophy }
+                ].map(crit => (
+                  <div key={crit.label} className="bg-surface border border-border rounded-2xl p-5">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <crit.icon size={16} className="text-brand" />
+                        <span className="text-sm font-bold text-dark">{crit.label}</span>
+                      </div>
+                      <span className="text-xs font-black text-brand bg-brand/10 px-2 py-0.5 rounded-full">{crit.score}/10</span>
+                    </div>
+                    <p className="text-xs text-muted leading-relaxed font-medium">{crit.feedback}</p>
+                  </div>
+                ))}
+
+                <div className="bg-brand/5 border border-brand/10 rounded-2xl p-5">
+                  <p className="text-[10px] font-black text-brand uppercase tracking-widest mb-2">Lead Interviewer Summary</p>
+                  <p className="text-sm text-mid leading-relaxed italic">&quot;{scorecard.summary}&quot;</p>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { clearSession(); router.push('/dashboard') }}
+                  className="flex-1 py-4 rounded-2xl bg-surface hover:bg-slate-100 border border-border text-sm font-bold transition"
+                >
+                  Back to Dashboard
+                </button>
+                <button
+                  onClick={() => {
+                    // Clear everything except config to trigger a new question generation
+                    localStorage.removeItem('curr_interview_code')
+                    localStorage.removeItem('curr_interview_msgs')
+                    localStorage.removeItem('curr_interview_problem')
+                    localStorage.removeItem('curr_interview_taskNum')
+                    window.location.reload()
+                  }}
+                  className="flex-1 py-4 rounded-2xl bg-brand hover:bg-brand-dark text-sm font-bold text-white transition shadow-lg shadow-brand/20"
+                >
+                  Start Next Challenge
+                </button>
+              </div>
             </div>
           </div>
         </div>
