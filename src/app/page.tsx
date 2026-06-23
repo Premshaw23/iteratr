@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import Link from 'next/link'
 import { Zap, Brain } from 'lucide-react'
+import Navbar from '@/components/Navbar'
 
 // ── Inline SVG Icons ──────────────────────────────────────────
 function IconArrow() {
@@ -341,69 +342,10 @@ export default async function LandingPage() {
   return (
     <div className="min-h-screen bg-white text-slate-900">
       {/* NAVBAR */}
-      <nav className="sticky top-0 z-50 border-b border-slate-200/50 bg-white/70 backdrop-blur-xl shadow-sm transition-all duration-300">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 no-underline">
-            <div className="w-8 h-8 rounded-md bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
-              <IconCode />
-            </div>
-            <span className="text-xl font-bold text-slate-900">
-              itera<span className="text-blue-600">tr</span>
-            </span>
-          </Link>
-
-          {/* Navigation Links */}
-          <div className="hidden md:flex items-center gap-6">
-            <Link
-              href="#features"
-              className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
-            >
-              Features
-            </Link>
-            <Link
-              href="#how-it-works"
-              className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
-            >
-              Methodology
-            </Link>
-            <Link
-              href="/leaderboard"
-              className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
-            >
-              Leaderboard
-            </Link>
-            <Link
-              href="#pricing"
-              className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
-            >
-              Pricing
-            </Link>
-          </div>
-
-          {/* Links */}
-          <div className="flex items-center gap-2">
-            {!session && (
-              <Link
-                href="/login"
-                className="px-3 py-2 text-sm font-medium text-slate-600 rounded-md transition-colors hover:text-slate-900 hover:bg-slate-100"
-              >
-                Sign in
-              </Link>
-            )}
-            <Link
-              href={cta}
-              className="btn-primary px-4 py-2.5 text-sm inline-flex items-center gap-2"
-            >
-              {session ? 'Dashboard' : 'Start free'}
-              <IconArrow />
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <Navbar session={session} cta={cta} />
 
       {/* HERO */}
-      <section className="relative overflow-hidden py-24 px-6">
+      <section className="relative overflow-hidden pt-36 pb-24 px-6">
         <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           {/* Left */}
           <div className="animate-fadeIn">
