@@ -124,10 +124,10 @@ export default function PublicProfilePage() {
   const isInterviewReady = user.unlocked_badges.includes('interview_ready')
 
   return (
-    <div className="min-h-screen bg-white pb-20">
+    <div className="min-h-screen bg-slate-50/50 pb-20 transition-colors duration-300">
 
       {/* Hero / Bio Section */}
-      <div className="relative pt-24 pb-16 px-6 overflow-hidden border-b border-slate-200">
+      <div className="relative pt-24 pb-16 px-6 overflow-hidden border-b border-slate-200 bg-white">
         {/* Background Gradients */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-6xl h-[400px] bg-gradient-to-b from-blue-400/5 to-transparent blur-3xl pointer-events-none" />
 
