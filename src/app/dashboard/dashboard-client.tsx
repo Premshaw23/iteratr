@@ -10,7 +10,8 @@ import ActivityGrid from './activity-grid'
 import EloChart from './elo-chart'
 import {
   Trophy, Flame, Target, MessageSquare, Plus, ArrowRight, User, Sparkles, Zap,
-  Search, Layout, List, GitBranch, Share2, Cpu, Link2, Server, LogOut, ChevronRight, Check, Upload, Snowflake
+  Search, Layout, List, GitBranch, Share2, Cpu, Link2, Server, LogOut, ChevronRight, Check, Upload, Snowflake,
+  Menu, X
 } from 'lucide-react'
 import { usePathname, useSearchParams } from 'next/navigation'
 
@@ -33,6 +34,7 @@ export default function DashboardClient({ user, topicStats, eloHistory, intervie
   const [reflectionText, setReflectionText] = useState<string | null>(null)
   const [reflectionLoading, setReflectionLoading] = useState(true)
   const [reflectionError, setReflectionError] = useState<string | null>(null)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   
   // Get distinct topics for radar logic
   const distinctTopics = Array.from(new Set(topicStats.map(s => s.topic)))
@@ -100,12 +102,173 @@ export default function DashboardClient({ user, topicStats, eloHistory, intervie
     refreshReflection()
   }, [])
 
+  const renderSidebarContent = () => (
+    <>
+      <div className="space-y-0.5">
+        <p className="text-[9px] font-black text-muted uppercase tracking-[0.2em] px-2 mb-2">Topic Curriculum</p>
+        <Link
+          href="/session/new"
+          onClick={() => setMobileMenuOpen(false)}
+          className={`flex items-center justify-between px-3 py-1.5 rounded-xl text-sm transition-premium group ${
+            pathname === '/session/new' && !activeTopic 
+            ? 'sidebar-link-active' 
+            : 'text-mid hover:bg-surface hover:text-dark'
+          }`}
+        >
+          <div className="flex items-center gap-2.5">
+            <div className={`w-7 h-7 rounded-lg ${pathname === '/session/new' && !activeTopic ? 'bg-brand text-white' : 'bg-brand/10 text-brand'} flex items-center justify-center group-hover:scale-110 transition-transform`}>
+              <Layout size={14} />
+            </div>
+            <span className="font-bold text-xs">All Topics</span>
+          </div>
+          <ChevronRight size={12} className={`transition-all ${pathname === '/session/new' && !activeTopic ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0'} text-brand`} />
+        </Link>
+
+        {topics.map(t => {
+          const stat = topicStats.find(s => s.topic === t.topic)
+          const solved = stat?.solved_count || 0
+          const isActive = activeTopic === t.topic
+          return (
+            <Link
+              key={t.topic}
+              href={`/session/new?topic=${t.topic}`}
+              onClick={() => setMobileMenuOpen(false)}
+              className={`flex items-center justify-between px-3 py-1.5 rounded-xl text-sm transition-premium group ${
+                isActive ? 'sidebar-link-active' : 'text-mid hover:bg-surface hover:text-dark'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <div className={`w-7 h-7 rounded-lg ${isActive ? 'bg-brand text-white' : `${t.bg} ${t.color}`} flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                  <t.icon size={14} />
+                </div>
+                <span className="font-semibold text-xs">{t.label}</span>
+              </div>
+              {solved > 0 && !isActive && (
+                <span className="text-[9px] font-black px-1 py-0.5 rounded-md bg-surface border border-border group-hover:border-brand/20 group-hover:text-brand transition-colors">
+                  {solved}
+                </span>
+              )}
+              {isActive && (
+                <ChevronRight size={12} className="text-white opacity-60" />
+              )}
+            </Link>
+          )
+        })}
+      </div>
+
+      <div>
+        <p className="text-[9px] font-black text-muted uppercase tracking-[0.2em] px-2 mb-2">Commander</p>
+        <div className="space-y-0.5">
+          {[
+            { label: 'Technical Stats',  icon: Trophy,  href: '/stats' },
+            { label: 'Mock Interviews', icon: MessageSquare, href: '/interview' },
+            { label: 'Leaderboard',    icon: Trophy,  href: '/leaderboard' },
+            { label: 'Private Uploads', icon: Upload, href: '/upload' },
+          ].map(item => (
+            <Link
+              key={item.label}
+              href={item.href}
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-sm text-mid hover:bg-surface hover:text-dark transition-premium group"
+            >
+              <item.icon size={14} className="text-muted group-hover:text-brand transition-colors" />
+              <span className="font-semibold text-xs">{item.label}</span>
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-auto pt-2 border-t border-border/50">
+        {user.is_pro ? (
+          <div className="px-3 py-3 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl flex flex-col gap-2 relative overflow-hidden group">
+            <div className="absolute -top-10 -right-10 w-24 h-24 bg-brand/10 blur-2xl rounded-full" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="p-1 bg-brand rounded-lg shadow-lg shadow-brand/20 group-hover:rotate-12 transition-transform">
+                  <Sparkles size={11} className="text-white fill-current" />
+                </div>
+                <span className="text-[8px] font-black text-brand uppercase tracking-[0.2em]">Iteratr Pro Tier</span>
+              </div>
+              <span className="text-[7px] font-black text-emerald-500 uppercase">Active</span>
+            </div>
+            <div className="mt-1">
+               <div className="flex items-center justify-between mb-1 px-0.5">
+                  <span className="text-[7px] font-black text-slate-600 uppercase tracking-widest">Compute Quota</span>
+                  <span className="text-[7px] font-black text-brand uppercase tracking-widest">1,000 / DAY</span>
+                </div>
+                <div className="h-1 w-full bg-blue-100 rounded-full overflow-hidden">
+                  <div className="h-full w-[85%] bg-brand animate-shimmer" />
+                </div>
+            </div>
+          </div>
+        ) : (
+          <Link
+            href="/subscribe"
+            onClick={() => setMobileMenuOpen(false)}
+            className="group relative block p-3 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 shadow-md overflow-hidden transition-premium hover:-translate-y-1 active:scale-95"
+          >
+            <div className="absolute -top-10 -right-10 w-20 h-20 bg-brand/20 blur-[40px] rounded-full -mr-10 -mt-10 group-hover:bg-brand/30 transition-colors" />
+
+            <div className="relative z-10 flex flex-col gap-1.5">
+              <div className="flex items-center justify-between">
+                <div className="flex flex-col">
+                  <span className="text-[8px] font-black text-brand uppercase tracking-[0.2em]">Iteratr Pro</span>
+                  <h4 className="text-xs font-black text-slate-900 leading-tight">Upgrade Engines</h4>
+                </div>
+                <div className="p-1 rounded-lg bg-white border border-blue-200 group-hover:bg-brand group-hover:border-brand transition-colors">
+                  <Zap size={12} className="text-brand group-hover:text-white group-hover:fill-current" />
+                </div>
+              </div>
+
+              <p className="text-[8px] text-slate-600 font-bold leading-tight uppercase tracking-tighter">
+                Senior evaluation (1000/day).
+              </p>
+
+              <div className="mt-0.5">
+                <div className="flex items-center justify-between mb-1 px-0.5">
+                  <span className="text-[7px] font-black text-slate-600 uppercase tracking-widest">Compute</span>
+                  <span className="text-[7px] font-black text-brand uppercase tracking-widest group-hover:animate-pulse">1,000 CYCLES</span>
+                </div>
+                <div className="h-1 w-full bg-blue-100 rounded-full overflow-hidden">
+                  <div className="h-full w-full bg-gradient-to-r from-brand via-indigo-400 to-brand animate-shimmer opacity-80" />
+                </div>
+              </div>
+            </div>
+          </Link>
+        )}
+
+        {weakZones.length > 0 && (
+          <Link 
+            href={`/session/new?mode=weak_zones&topics=${encodeURIComponent(Array.from(new Set(weakZones.map(z => z.topic))).join(','))}&subtopics=${encodeURIComponent(weakZones.map(z => z.subtopic).join(','))}`}
+            onClick={() => setMobileMenuOpen(false)}
+            className="mt-3 flex items-center justify-between px-3 py-2 bg-red-50 text-red-600 rounded-xl text-xs font-bold border border-red-100 hover:bg-red-100 transition-colors group"
+          >
+            <div className="flex items-center gap-2">
+               <Target size={14} className="animate-pulse" />
+               <span>Fix Weak Zones ({weakZones.length})</span>
+            </div>
+            <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
+          </Link>
+        )}
+      </div>
+    </>
+  )
+
   return (
     <div className="min-h-screen gradient-mesh">
 
       {/* ── TOPBAR ─────────────────────────────────── */}
       <header className="h-16 bg-glass-heavy border-b border-border/50 flex items-center justify-between px-6 sticky top-0 z-50 shadow-sm">
-        <div className="flex items-center gap-10">
+        <div className="flex items-center gap-4 lg:gap-10">
+          {/* Hamburger Menu Toggle on Mobile */}
+          <button
+            onClick={() => setMobileMenuOpen(true)}
+            className="lg:hidden p-1.5 rounded-xl border border-border bg-white text-dark hover:bg-slate-50 transition-premium shadow-sm shrink-0"
+            aria-label="Open navigation menu"
+          >
+            <Menu size={20} />
+          </button>
+
           <Link href="/" className="flex items-center gap-2 text-2xl font-black text-brand tracking-tighter hover:opacity-90 transition-premium group">
             <div className="w-8 h-8 bg-brand rounded-xl flex items-center justify-center shadow-lg shadow-brand/20 group-hover:rotate-12 transition-premium">
               <Zap size={18} className="text-white fill-current" />
@@ -137,7 +300,7 @@ export default function DashboardClient({ user, topicStats, eloHistory, intervie
           </nav>
         </div>
 
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4 lg:gap-6">
           {/* Quick Search Mockup */}
           <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-surface border border-border rounded-xl text-muted text-xs cursor-text hover:border-brand/30 transition-premium group">
             <Search size={14} className="group-hover:text-brand transition-colors" />
@@ -146,16 +309,16 @@ export default function DashboardClient({ user, topicStats, eloHistory, intervie
           </div>
           {/* Streak Indicator */}
           {user.streak_count > 0 && (
-            <div className="flex items-center gap-2 bg-amber-500/10 text-amber-700 border border-amber-500/20 px-3 py-1.5 rounded-full shadow-sm animate-pulse-slow">
+            <div className="flex items-center gap-2 bg-amber-500/10 text-amber-700 border border-amber-500/20 px-2.5 py-1.5 rounded-full shadow-sm">
               <Flame size={14} className="fill-amber-500 stroke-amber-600 animate-float" />
-              <span className="text-sm font-bold">{user.streak_count}</span>
-              <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Streak</span>
+              <span className="text-xs lg:text-sm font-bold">{user.streak_count}</span>
+              <span className="hidden sm:inline text-[9px] font-black uppercase tracking-widest opacity-60">Streak</span>
             </div>
           )}
 
           {/* User Menu */}
           <div className="relative group">
-            <button className="flex items-center gap-3 p-1 pr-4 rounded-2xl border border-border bg-white hover:border-brand/40 hover:shadow-xl hover:shadow-brand/5 shadow-sm transition-premium active:scale-95 group-hover:bg-surface/50">
+            <button className="flex items-center gap-3 p-1 pr-2 sm:pr-4 rounded-2xl border border-border bg-white hover:border-brand/40 hover:shadow-xl hover:shadow-brand/5 shadow-sm transition-premium active:scale-95 group-hover:bg-surface/50">
               <div className="w-9 h-9 rounded-xl bg-brand overflow-hidden shadow-inner flex items-center justify-center text-white text-xs font-bold border-2 border-white ring-2 ring-brand/5">
                 {user.avatar_url ? (
                   <Image src={user.avatar_url} alt={user.display_name} width={36} height={36} unoptimized className="w-full h-full object-cover" />
@@ -163,14 +326,14 @@ export default function DashboardClient({ user, topicStats, eloHistory, intervie
                   user.display_name.slice(0, 2).toUpperCase()
                 )}
               </div>
-              <div className="flex flex-col items-start">
+              <div className="hidden sm:flex flex-col items-start">
                 <span className="text-xs font-black text-dark leading-none">{user.display_name}</span>
                 <div className="flex items-center gap-1 mt-1">
                    <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
                    <span className="text-[10px] text-muted font-bold tracking-tighter">Elo {user.elo_rating}</span>
                 </div>
               </div>
-              <ChevronRight size={14} className="text-muted ml-1 group-hover:rotate-90 transition-transform" />
+              <ChevronRight size={14} className="text-muted ml-0.5 sm:ml-1 group-hover:rotate-90 transition-transform" />
             </button>
 
             {/* Dropdown Menu */}
@@ -267,160 +430,45 @@ export default function DashboardClient({ user, topicStats, eloHistory, intervie
         </div>
       </header>
 
-      <div className="flex" style={{ height: 'calc(100vh - 64px)' }}>
+      {/* Main Grid Wrapper */}
+      <div className="flex flex-col lg:flex-row lg:h-[calc(100vh-64px)]" style={{ minHeight: 'calc(100vh - 64px)' }}>
 
-        {/* ── SIDEBAR ─────────────────────────────────── */}
-        <aside className="w-60 bg-white border-r border-border/50 p-3 flex flex-col gap-3 overflow-y-auto scrollbar-thin">
-          <div className="space-y-0.5">
-            <p className="text-[9px] font-black text-muted uppercase tracking-[0.2em] px-2 mb-2">Topic Curriculum</p>
-            <Link
-              href="/session/new"
-              className={`flex items-center justify-between px-3 py-1.5 rounded-xl text-sm transition-premium group ${
-                pathname === '/session/new' && !activeTopic 
-                ? 'sidebar-link-active' 
-                : 'text-mid hover:bg-surface hover:text-dark'
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <div className={`w-7 h-7 rounded-lg ${pathname === '/session/new' && !activeTopic ? 'bg-brand text-white' : 'bg-brand/10 text-brand'} flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                  <Layout size={14} />
-                </div>
-                <span className="font-bold text-xs">All Topics</span>
-              </div>
-              <ChevronRight size={12} className={`transition-all ${pathname === '/session/new' && !activeTopic ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0'} text-brand`} />
-            </Link>
-
-            {topics.map(t => {
-              const stat = topicStats.find(s => s.topic === t.topic)
-              const solved = stat?.solved_count || 0
-              const isActive = activeTopic === t.topic
-              return (
-                <Link
-                  key={t.topic}
-                  href={`/session/new?topic=${t.topic}`}
-                  className={`flex items-center justify-between px-3 py-1.5 rounded-xl text-sm transition-premium group ${
-                    isActive ? 'sidebar-link-active' : 'text-mid hover:bg-surface hover:text-dark'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className={`w-7 h-7 rounded-lg ${isActive ? 'bg-brand text-white' : `${t.bg} ${t.color}`} flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                      <t.icon size={14} />
-                    </div>
-                    <span className="font-semibold text-xs">{t.label}</span>
-                  </div>
-                  {solved > 0 && !isActive && (
-                    <span className="text-[9px] font-black px-1 py-0.5 rounded-md bg-surface border border-border group-hover:border-brand/20 group-hover:text-brand transition-colors">
-                      {solved}
-                    </span>
-                  )}
-                  {isActive && (
-                    <ChevronRight size={12} className="text-white opacity-60" />
-                  )}
-                </Link>
-              )
-            })}
-          </div>
-
-          <div>
-            <p className="text-[9px] font-black text-muted uppercase tracking-[0.2em] px-2 mb-2">Commander</p>
-            <div className="space-y-0.5">
-              {[
-                { label: 'Technical Stats',  icon: Trophy,  href: '/stats' },
-                { label: 'Mock Interviews', icon: MessageSquare, href: '/interview' },
-                { label: 'Leaderboard',    icon: Trophy,  href: '/leaderboard' },
-                { label: 'Private Uploads', icon: Upload, href: '/upload' },
-              ].map(item => (
-                <Link
-                  key={item.label}
-                  href={item.href}
-                  className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-sm text-mid hover:bg-surface hover:text-dark transition-premium group"
-                >
-                  <item.icon size={14} className="text-muted group-hover:text-brand transition-colors" />
-                  <span className="font-semibold text-xs">{item.label}</span>
-                </Link>
-              ))}
-            </div>
-          </div>
-
-          <div className="mt-auto pt-2 border-t border-border/50">
-            {user.is_pro ? (
-              <div className="px-3 py-3 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl flex flex-col gap-2 relative overflow-hidden group">
-                <div className="absolute -top-10 -right-10 w-24 h-24 bg-brand/10 blur-2xl rounded-full" />
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="p-1 bg-brand rounded-lg shadow-lg shadow-brand/20 group-hover:rotate-12 transition-transform">
-                      <Sparkles size={11} className="text-white fill-current" />
-                    </div>
-                    <span className="text-[8px] font-black text-brand uppercase tracking-[0.2em]">Iteratr Pro Tier</span>
-                  </div>
-                  <span className="text-[7px] font-black text-emerald-500 uppercase">Active</span>
-                </div>
-                <div className="mt-1">
-                   <div className="flex items-center justify-between mb-1 px-0.5">
-                      <span className="text-[7px] font-black text-slate-600 uppercase tracking-widest">Compute Quota</span>
-                      <span className="text-[7px] font-black text-brand uppercase tracking-widest">1,000 / DAY</span>
-                    </div>
-                    <div className="h-1 w-full bg-blue-100 rounded-full overflow-hidden">
-                      <div className="h-full w-[85%] bg-brand animate-shimmer" />
-                    </div>
-                </div>
-              </div>
-            ) : (
-              <Link
-                href="/subscribe"
-                className="group relative block p-3 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 shadow-md overflow-hidden transition-premium hover:-translate-y-1 active:scale-95"
-              >
-                {/* Refined Background Elements */}
-                <div className="absolute -top-10 -right-10 w-20 h-20 bg-brand/20 blur-[40px] rounded-full -mr-10 -mt-10 group-hover:bg-brand/30 transition-colors" />
-
-                <div className="relative z-10 flex flex-col gap-1.5">
-                  <div className="flex items-center justify-between">
-                    <div className="flex flex-col">
-                      <span className="text-[8px] font-black text-brand uppercase tracking-[0.2em]">Iteratr Pro</span>
-                      <h4 className="text-xs font-black text-slate-900 leading-tight">Upgrade Engines</h4>
-                    </div>
-                    <div className="p-1 rounded-lg bg-white border border-blue-200 group-hover:bg-brand group-hover:border-brand transition-colors">
-                      <Zap size={12} className="text-brand group-hover:text-white group-hover:fill-current" />
-                    </div>
-                  </div>
-
-                  <p className="text-[8px] text-slate-600 font-bold leading-tight uppercase tracking-tighter">
-                    Senior evaluation (1000/day).
-                  </p>
-
-                  <div className="mt-0.5">
-                    <div className="flex items-center justify-between mb-1 px-0.5">
-                      <span className="text-[7px] font-black text-slate-600 uppercase tracking-widest">Compute</span>
-                      <span className="text-[7px] font-black text-brand uppercase tracking-widest group-hover:animate-pulse">1,000 CYCLES</span>
-                    </div>
-                    <div className="h-1 w-full bg-blue-100 rounded-full overflow-hidden">
-                      <div className="h-full w-full bg-gradient-to-r from-brand via-indigo-400 to-brand animate-shimmer opacity-80" />
-                    </div>
-                  </div>
-                </div>
-              </Link>
-            )}
-
-            {weakZones.length > 0 && (
-              <Link 
-                href={`/session/new?mode=weak_zones&topics=${encodeURIComponent(Array.from(new Set(weakZones.map(z => z.topic))).join(','))}&subtopics=${encodeURIComponent(weakZones.map(z => z.subtopic).join(','))}`}
-                className="mt-3 flex items-center justify-between px-3 py-2 bg-red-50 text-red-600 rounded-xl text-xs font-bold border border-red-100 hover:bg-red-100 transition-colors group"
-              >
-                <div className="flex items-center gap-2">
-                   <Target size={14} className="animate-pulse" />
-                   <span>Fix Weak Zones ({weakZones.length})</span>
-                </div>
-                <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
-              </Link>
-            )}
-          </div>
+        {/* ── DESKTOP SIDEBAR ─────────────────────────── */}
+        <aside className="hidden lg:flex w-60 bg-white border-r border-border/50 p-3 flex-col gap-3 overflow-y-auto scrollbar-thin shrink-0">
+          {renderSidebarContent()}
         </aside>
 
-        {/* ── MAIN ─────────────────────────────────────── */}
-        <main className="flex-1 p-6 overflow-y-auto">
+        {/* ── MOBILE SIDEBAR DRAWER ───────────────────── */}
+        {mobileMenuOpen && (
+          <div className="lg:hidden fixed inset-0 z-50 flex">
+            {/* Backdrop */}
+            <div
+              className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity duration-300"
+              onClick={() => setMobileMenuOpen(false)}
+            />
+            {/* Slide-over Drawer Content */}
+            <aside className="relative w-64 max-w-[80vw] bg-white h-full p-4 flex flex-col gap-4 shadow-2xl overflow-y-auto z-10 animate-in slide-in-from-left duration-300">
+              <div className="flex items-center justify-between pb-3 border-b border-border">
+                <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Navigation</span>
+                <button
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-900 transition-colors"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="flex flex-col gap-3 flex-1">
+                {renderSidebarContent()}
+              </div>
+            </aside>
+          </div>
+        )}
+
+        {/* ── MAIN CONTENT ─────────────────────────────────────── */}
+        <main className="flex-1 p-4 lg:p-6 overflow-y-auto">
 
           {/* Stats row */}
-          <div className="grid grid-cols-4 gap-3 mb-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
             {[
               { 
                 label: 'Elo rating',  
@@ -457,8 +505,8 @@ export default function DashboardClient({ user, topicStats, eloHistory, intervie
                   </div>
                 </div>
                 <div>
-                  <p className="text-3xl font-black text-dark tracking-tighter tabular-nums">{s.value}</p>
-                  <p className={`text-[11px] mt-1 font-bold uppercase tracking-wide ${s.color}`}>{s.sub}</p>
+                  <p className="text-2xl lg:text-3xl font-black text-dark tracking-tighter tabular-nums leading-none">{s.value}</p>
+                  <p className={`text-[10px] lg:text-[11px] mt-1.5 font-bold uppercase tracking-wide truncate ${s.color}`}>{s.sub}</p>
                 </div>
               </div>
             ))}
@@ -468,7 +516,7 @@ export default function DashboardClient({ user, topicStats, eloHistory, intervie
           <div className="bg-white border border-border rounded-2xl p-4 mb-4 overflow-hidden relative">
             <div className="absolute -top-10 -right-10 w-40 h-40 bg-brand/5 blur-3xl rounded-full" />
             <div className="relative">
-              <div className="flex items-center justify-between gap-3 mb-3">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
                 <div className="flex items-center gap-2.5">
                   <div className="p-2 rounded-xl bg-brand/10 text-brand border border-brand/10">
                     <Sparkles size={16} />
@@ -535,7 +583,7 @@ export default function DashboardClient({ user, topicStats, eloHistory, intervie
             <ActivityGrid streakCount={user.streak_count} />
           </div>
 
-          <div className="gradient-brand text-white rounded-2xl p-6 mb-6 flex items-center gap-6 shadow-xl shadow-brand/20 relative overflow-hidden animate-pulse-slow">
+          <div className="gradient-brand text-white rounded-2xl p-6 mb-6 flex flex-col md:flex-row md:items-center gap-6 shadow-xl shadow-brand/20 relative overflow-hidden animate-pulse-slow">
             <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 blur-3xl rounded-full -mr-20 -mt-20" />
             <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-lg flex items-center justify-center text-white flex-shrink-0 animate-float shadow-inner">
               <Plus className="w-8 h-8" strokeWidth={3} />
@@ -547,19 +595,19 @@ export default function DashboardClient({ user, topicStats, eloHistory, intervie
               <h3 className="text-xl font-black tracking-tight text-white mb-2">
                 Ground your skills with the community challenge.
               </h3>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <span className="bg-white/20 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-white/20">Elo {user.elo_rating}</span>
                 <span className="bg-emerald-400/20 text-emerald-100 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-emerald-400/20">Priority Evaluation Node</span>
               </div>
             </div>
             {eloHistory.filter(h => new Date(h.created_at).toDateString() === new Date().toDateString()).length > 0 ? (
-              <div className="relative z-10 bg-white/20 text-white backdrop-blur-md text-sm font-black px-8 py-3.5 rounded-xl flex-shrink-0 shadow-lg border border-white/20 uppercase tracking-widest cursor-default flex items-center gap-2">
+              <div className="relative z-10 bg-white/20 text-white backdrop-blur-md text-sm font-black px-8 py-3.5 rounded-xl flex-shrink-0 shadow-lg border border-white/20 uppercase tracking-widest cursor-default flex items-center justify-center gap-2 w-full md:w-auto">
                 <Check size={16} /> Completed
               </div>
             ) : (
               <Link
                 href="/session/new?mode=daily"
-                className="relative z-10 bg-white text-brand text-sm font-black px-8 py-3.5 rounded-xl hover:bg-brand-light transition-all flex-shrink-0 shadow-lg active:scale-95 uppercase tracking-widest"
+                className="relative z-10 bg-white text-brand text-sm font-black px-8 py-3.5 rounded-xl hover:bg-brand-light transition-all flex-shrink-0 shadow-lg active:scale-95 uppercase tracking-widest text-center w-full md:w-auto"
               >
                 Play Daily
               </Link>
@@ -567,7 +615,7 @@ export default function DashboardClient({ user, topicStats, eloHistory, intervie
           </div>
 
           {/* Two-col: Elo Trend + Recent Activity */}
-          <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
             
             {/* Elo Trend Chart */}
             <div className="bg-white border border-border rounded-xl p-4 flex flex-col">
